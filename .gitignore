@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Xcode – projekt generuje XcodeGen z project.yml
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+build/
+
+# SwiftPM
+.build/
+.swiftpm/
+
+# Lokální podpisová konfigurace (DEVELOPMENT_TEAM, CODE_SIGN_IDENTITY)
+Config/Local.xcconfig
+
+# npm – jen pro aktualizaci vendorovaných web knihoven
+node_modules/
+
+# Výstupy skriptů
+scripts/.sim/
