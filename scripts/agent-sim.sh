@@ -144,4 +144,4 @@ for _ in $(seq 1 "$REPEAT"); do
     fi
 done
 
-echo "Hotovo. Náhled musí ukazovat „Revize $REVISION“."
+echo "Hotovo. Náhled musí ukazovat „Revize ${REVISION}“."
