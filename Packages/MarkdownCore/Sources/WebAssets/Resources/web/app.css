@@ -81,6 +81,12 @@ body {
 .mdv-octicon-alert { --mdv-icon: url(vendor/octicons/alert-16.svg); }
 .mdv-octicon-stop { --mdv-icon: url(vendor/octicons/stop-16.svg); }
 
+/* Téma highlight.js přidává vlastní padding a pozadí – v <pre> je už má GitHub CSS. */
+.markdown-body pre code.hljs {
+  padding: 0;
+  background: transparent;
+}
+
 /* Matika. Display varianta je <span>, protože může stát uvnitř <p>. */
 .markdown-body .math-display {
   display: block;
@@ -103,6 +109,16 @@ body {
 .markdown-body .mdv-mermaid svg {
   max-width: 100%;
   height: auto;
+}
+
+.markdown-body .mdv-mermaid-stale svg {
+  opacity: 0.55;
+}
+
+.markdown-body .mdv-mermaid-badge {
+  margin-bottom: 8px;
+  color: var(--mdv-error);
+  font: 12px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .markdown-body pre.mdv-mermaid-error::before {

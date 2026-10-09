@@ -7,7 +7,8 @@
 //
 // Pravidla (jako pandoc/GitHub):
 //   $…$     inline; za otevíracím `$` nesmí být mezera, před zavíracím `$` nesmí
-//           být mezera a za ním nesmí následovat číslice (`$5 a $10` není matika)
+//           být mezera a za ním nesmí následovat číslice (`$5 a $10` není matika);
+//           nesmí přeskočit přes backtick (code span má přednost)
 //   $$…$$   display; smí obsahovat mezery i konce řádků v rámci odstavce
 //   $`…`$   inline (alternativní zápis GitHubu)
 //   \$      escapovaný dolar řeší jádro cmarku dřív, než se dostane sem
@@ -95,6 +96,10 @@ static bufsize_t find_inline_close(const unsigned char *data, bufsize_t from, bu
       i++;
       continue;
     }
+    // Code span má přednost: inline matika nesmí přeskočit přes backtick
+    // („Ceny $5 a $10. Kód `$y$`“ není matika – stejně jako na GitHubu).
+    if (c == '`')
+      return -1;
     if (c != '$')
       continue;
     if (is_space(data[i - 1]))

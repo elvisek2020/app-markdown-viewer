@@ -27,12 +27,19 @@ let package = Package(
                 "CMarkMath",
                 .product(name: "cmark-gfm", package: "swift-cmark"),
                 .product(name: "cmark-gfm-extensions", package: "swift-cmark"),
-            ]
+            ],
+            // Emoji zkratky z gemoji (generuje web-vendor/update.sh).
+            resources: [.copy("Resources/emoji.json"), .copy("Resources/gemoji-LICENSE")]
         ),
         .target(name: "FileWatch"),
         // Šablona, CSS, app.js a vendorované knihovny náhledu (aktualizace: web-vendor/update.sh).
         .target(name: "WebAssets", resources: [.copy("Resources/web")]),
-        .testTarget(name: "MarkdownCoreTests", dependencies: ["MarkdownCore", "WebAssets"]),
+        .testTarget(
+            name: "MarkdownCoreTests",
+            dependencies: ["MarkdownCore", "WebAssets"],
+            // Golden fixtures + referenční výstupy GitHubu (scripts/gh-golden.sh).
+            resources: [.copy("Fixtures")]
+        ),
         .testTarget(name: "FileWatchTests", dependencies: ["FileWatch"]),
     ]
 )

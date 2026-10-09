@@ -1,0 +1,1 @@
+Stiskni <kbd>Cmd</kbd>+<kbd>C</kbd>, H<sub>2</sub>O, x<sup>2</sup>, <ins>vloženo</ins>, <mark>zvýrazněno</mark>.

@@ -17,17 +17,21 @@ public struct RenderOptions: Sendable, Equatable {
     public var math: Bool
     public var alerts: Bool
     public var headingAnchors: Bool
+    /// Emoji zkratky `:rocket:` → 🚀.
+    public var emoji: Bool
 
     public init(
         frontMatter: FrontMatterMode = .table,
         math: Bool = true,
         alerts: Bool = true,
-        headingAnchors: Bool = true
+        headingAnchors: Bool = true,
+        emoji: Bool = true
     ) {
         self.frontMatter = frontMatter
         self.math = math
         self.alerts = alerts
         self.headingAnchors = headingAnchors
+        self.emoji = emoji
     }
 }
 
@@ -137,6 +141,15 @@ private struct ASTTransformer {
     }
 
     mutating func run(on document: CMarkNode) {
+        Self.mergeAdjacentText(in: document)
+        if options.emoji {
+            for node in document.descendants where node.type == CMARK_NODE_TEXT {
+                if let replaced = EmojiShortcodes.replacing(in: node.literal ?? "") {
+                    cmark_node_set_literal(node, replaced)
+                }
+            }
+        }
+
         // Nejdřív posbírat, pak měnit – úpravy stromu během průchodu nejsou bezpečné.
         let nodes = document.descendants
         for node in nodes {
@@ -189,6 +202,24 @@ private struct ASTTransformer {
             cmark_node_free(block)
         default:
             features.insert(.code)
+        }
+    }
+
+    /// cmark dělí text u speciálních znaků (`:`, `[`, `!` …) do více uzlů; pro emoji a alerts
+    /// je potřeba souvislý text. Vykreslení se tím nemění (inline uzly nemají sourcepos v HTML).
+    static func mergeAdjacentText(in document: CMarkNode) {
+        // Kontejnery se posbírají předem; uvolňují se jen textové uzly, které v seznamu nejsou.
+        let containers = ([document] + document.descendants).filter { $0.type != CMARK_NODE_TEXT }
+        for container in containers {
+            var child = container.firstChild
+            while let current = child {
+                if current.type == CMARK_NODE_TEXT, let next = current.next, next.type == CMARK_NODE_TEXT {
+                    cmark_node_set_literal(current, (current.literal ?? "") + (next.literal ?? ""))
+                    cmark_node_free(next)
+                    continue
+                }
+                child = current.next
+            }
         }
     }
 

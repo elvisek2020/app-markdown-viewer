@@ -122,7 +122,7 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     private func loadLibraries(for features: DocumentFeatures) async {
         var needed: [WebAssets.Library] = []
         if features.contains(.code) { needed.append(.highlight) }
-        if features.contains(.math) { needed.append(.katex) }
+        if features.contains(.math) { needed += [.katex, .katexCopyTex] }
         if features.contains(.mermaid) { needed.append(.mermaid) }
         for library in needed where !loadedLibraries.contains(library) {
             // evaluateJavaScript (ne callAsyncJavaScript): top-level `var` musí skončit v globálním objektu worldu.

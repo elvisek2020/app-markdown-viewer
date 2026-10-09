@@ -28,6 +28,8 @@ public enum WebAssets {
     public enum Library: String, CaseIterable, Sendable {
         case highlight = "vendor/highlight.js/highlight.min.js"
         case katex = "vendor/katex/katex.min.js"
+        /// Kopírování vyrenderovaného vzorce vloží jeho TeX.
+        case katexCopyTex = "vendor/katex/copy-tex.min.js"
         case mermaid = "vendor/mermaid/mermaid.min.js"
     }
 

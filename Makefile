@@ -36,6 +36,9 @@ install: release
 	ln -sf "$(INSTALL_DIR)/MDView.app/Contents/Resources/bin/mdv" "$(BIN_DIR)/mdv"
 	$(LSREGISTER) -f "$(INSTALL_DIR)/MDView.app"
 	@echo "Nainstalováno: $(INSTALL_DIR)/MDView.app, CLI: $(BIN_DIR)/mdv"
+	@if pgrep -qf "$(INSTALL_DIR)/MDView.app/Contents/MacOS/MDView"; then \
+		echo "Pozor: MDView běží ze staré verze – ukonči ho (⌘Q) a spusť znovu."; \
+	fi
 
 uninstall:
 	rm -f "$(BIN_DIR)/mdv"

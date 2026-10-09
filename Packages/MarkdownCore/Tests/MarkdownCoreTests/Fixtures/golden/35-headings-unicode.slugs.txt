@@ -1,0 +1,4 @@
+příliš-žluťoučký-kůň
+emoji--a-interpunkce
+api-v20-beta--novinky
+snake_case--kebab-case

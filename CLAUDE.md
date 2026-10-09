@@ -11,8 +11,11 @@ make build       # XcodeGen + Debug build aplikace
 make install     # Release build → /Applications/MDView.app + symlink mdv do /opt/homebrew/bin
 make vendor      # aktualizace vendorovaných JS/CSS podle web-vendor/package.json
 
-scripts/selftest.sh [soubor.md]     # Debug self-test náhledu bez UI → JSON report (izolace JS, KaTeX, Mermaid, obrázky)
-scripts/selftest-sim.sh [scénář]     # zátěž auto-reloadu v reálné aplikaci, měří zpoždění náhledu
+scripts/selftest.sh [soubor.md] [args]  # Debug self-test náhledu bez UI → JSON report (izolace JS, KaTeX, Mermaid, obrázky)
+scripts/selftest-sim.sh [scénář]        # zátěž auto-reloadu v reálné aplikaci, měří zpoždění náhledu
+scripts/ci-integration.sh               # obojí + bezpečnostní dokument s kontrolami (běží i v CI)
+scripts/gh-golden.sh [fixture]          # referenční výstupy GitHub API pro golden testy (po změně fixtures)
+scripts/readme-images.sh                # ikona + snímky náhledu do README (docs/images)
 ```
 
 Ověřování UI dělej přes self-testy (`App/Web/SelfTest.swift`, jen Debug), ne přes ovládání obrazovky.
@@ -34,6 +37,8 @@ Ověřování UI dělej přes self-testy (`App/Web/SelfTest.swift`, jen Debug), 
 
 - Komentáře a texty UI česky, identifikátory anglicky.
 - Testy ve **Swift Testing** (`import Testing`), ne XCTest.
+- Změna renderingu → `make test` (golden testy proti GitHubu musí projít; záměrné rozdíly patří do `GoldenTests.knownDifferences` s důvodem).
+- CI (`.github/workflows/ci.yml`, macos-26) spouští testy, build i `scripts/ci-integration.sh`.
 - Swift 6 strict concurrency. `FileWatcher` drží stav na vlastní sériové frontě a handler volá na ní.
 - Bezpečnost: z dokumentu nikdy neběží JS a odkazy nikdy nic nespouštějí (viz `docs/PLAN.md`, sekce Bezpečnost odkazů). `Samples/security.md` musí zůstat neškodný.
 - Řádky front matteru se před parsováním nahrazují prázdnými – čísla řádků v `data-sourcepos` musí vždy odpovídat původnímu souboru (scroll sync).

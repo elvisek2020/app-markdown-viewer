@@ -69,7 +69,7 @@
       "style", "form", "button", "textarea", "select", "option", "iframe", "frame", "frameset",
       "object", "embed", "link", "meta", "base", "dialog", "template", "slot",
     ],
-    FORBID_ATTR: ["style", "target", "formaction", "srcset"],
+    FORBID_ATTR: ["style", "target", "formaction"],
     ALLOW_DATA_ATTR: true,
     // Odkazy smí mít jakékoli schéma kromě skriptovacích – o otevření rozhoduje Swift (allowlist).
     ALLOWED_URI_REGEXP: /^(?!\s*(?:javascript|vbscript|data):)/i,
@@ -92,25 +92,41 @@
     });
   }
 
-  /** Relativní URL → absolutní `mdv-file://` vůči adresáři dokumentu (bez `<base>`, kvůli #kotvám). */
+  /**
+   * URL z dokumentu → URL pro náhled: relativní vůči adresáři dokumentu jako `mdv-file://`
+   * (bez `<base>`, kvůli #kotvám). `null` = atribut odstranit.
+   */
+  function resolveURL(value, baseURL, isLink) {
+    if (value.startsWith("#")) return value;
+    if (value.startsWith("//")) return "https:" + value;
+    // Obrázky z file: URL načte jen náš handler; odkazy na file: řeší Swift (Reveal in Finder).
+    if (/^file:/i.test(value)) return isLink ? value : value.replace(/^file:/i, "mdv-file:");
+    if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return value;
+    try {
+      return new URL(value, baseURL).href;
+    } catch (error) {
+      return null;
+    }
+  }
+
   function rewriteURLs(root, baseURL) {
     for (const element of root.querySelectorAll("[src], [href], [poster]")) {
       for (const attribute of ["src", "href", "poster"]) {
         const value = element.getAttribute(attribute);
-        if (value == null || value === "" || value.startsWith("#")) continue;
-        if (value.startsWith("//")) {
-          element.setAttribute(attribute, "https:" + value);
-        } else if (/^file:/i.test(value)) {
-          // Obrázky z file: URL načte jen náš handler; odkazy řeší Swift (Reveal in Finder).
-          if (attribute !== "href") element.setAttribute(attribute, value.replace(/^file:/i, "mdv-file:"));
-        } else if (!/^[a-z][a-z0-9+.-]*:/i.test(value)) {
-          try {
-            element.setAttribute(attribute, new URL(value, baseURL).href);
-          } catch (error) {
-            element.removeAttribute(attribute);
-          }
-        }
+        if (value == null || value === "") continue;
+        const resolved = resolveURL(value, baseURL, attribute === "href");
+        if (resolved == null) element.removeAttribute(attribute);
+        else if (resolved !== value) element.setAttribute(attribute, resolved);
       }
+    }
+    // <picture><source srcset media="(prefers-color-scheme: dark)"> – obrázky pro světlý a tmavý vzhled.
+    for (const element of root.querySelectorAll("[srcset]")) {
+      const candidates = element.getAttribute("srcset").split(",").map((candidate) => {
+        const [url, ...descriptors] = candidate.trim().split(/\s+/);
+        const resolved = url ? resolveURL(url, baseURL, false) : null;
+        return resolved ? [resolved, ...descriptors].join(" ") : null;
+      }).filter(Boolean);
+      element.setAttribute("srcset", candidates.join(", "));
     }
   }
 
@@ -273,7 +289,14 @@
     }
   }
 
+  // MARK: - Mermaid – líně podle viditelnosti, při chybě poslední platná verze
+
   let mermaidTheme = null;
+  let diagramObserver = null;
+  let diagramQueue = Promise.resolve();
+  const pendingDiagrams = new Set();
+  /** SVG posledních platných diagramů podle pořadí v dokumentu (agent diagram právě píše → chyba). */
+  const lastGoodDiagrams = [];
 
   function configureMermaid() {
     const theme = prefersDark() ? "dark" : "default";
@@ -282,47 +305,109 @@
     mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme });
   }
 
+  const diagramSelector = "pre > code.language-mermaid, .mdv-mermaid";
+
+  function diagramIndex(element) {
+    return [...content().querySelectorAll(diagramSelector)]
+      .findIndex((candidate) => candidate === element || candidate.parentElement === element);
+  }
+
+  function diagramContainer(source, svg, error) {
+    const container = document.createElement("div");
+    container.className = error ? "mdv-mermaid mdv-mermaid-stale" : "mdv-mermaid";
+    container.dataset.mermaidSource = source;
+    container.innerHTML = svg;
+    if (error) {
+      const badge = document.createElement("div");
+      badge.className = "mdv-mermaid-badge";
+      badge.textContent = `Diagram teď nejde vykreslit (${error}). Zobrazuji poslední platnou verzi.`;
+      container.prepend(badge);
+    }
+    return container;
+  }
+
   async function renderMermaidElement(target, source) {
+    if (!target.isConnected) return;
+    configureMermaid();
+    const index = diagramIndex(target);
     const id = `mdv-mermaid-${++state.mermaidCounter}`;
+    let replacement = null;
     try {
       const { svg } = await mermaid.render(id, source);
-      const container = document.createElement("div");
-      container.className = "mdv-mermaid";
-      container.dataset.mermaidSource = source;
-      for (const attribute of ["data-mdv-key", "data-sourcepos"]) {
-        if (target.hasAttribute(attribute)) container.setAttribute(attribute, target.getAttribute(attribute));
-      }
-      container.innerHTML = svg;
-      target.replaceWith(container);
+      if (index >= 0) lastGoodDiagrams[index] = svg;
+      replacement = diagramContainer(source, svg, null);
     } catch (error) {
-      if (target.tagName === "PRE") {
-        target.classList.add("mdv-mermaid-error");
-        target.dataset.error = String(error?.message ?? error).split("\n")[0];
-      }
       // Po chybě nechává Mermaid v <body> dočasný kontejner s chybovým SVG. Po úspěchu ne –
       // a výsledné SVG nese stejné id, takže úklid smí běžet jen tady.
       document.getElementById(`d${id}`)?.remove();
       const leftover = document.getElementById(id);
       if (leftover && !leftover.closest("#mdv-content")) leftover.remove();
+      const message = String(error?.message ?? error).split("\n")[0];
+      const previous = index >= 0 ? lastGoodDiagrams[index] : null;
+      if (previous) {
+        replacement = diagramContainer(source, previous, message);
+      } else if (target.tagName === "PRE") {
+        target.classList.add("mdv-mermaid-error");
+        target.dataset.error = message;
+      }
     }
+    // Mezitím mohla přijít novější verze dokumentu a blok nahradit.
+    if (!replacement || !target.isConnected) return;
+    for (const attribute of ["data-mdv-key", "data-sourcepos"]) {
+      if (target.hasAttribute(attribute)) replacement.setAttribute(attribute, target.getAttribute(attribute));
+    }
+    const container = scroller();
+    const before = target.getBoundingClientRect();
+    const above = before.bottom <= container.getBoundingClientRect().top;
+    target.replaceWith(replacement);
+    // Diagram nad viditelnou částí změnil výšku – posunout, aby text pod ním neposkočil.
+    if (above) container.scrollTop += replacement.getBoundingClientRect().height - before.height;
   }
 
-  async function renderMermaid(blocks) {
+  /** Mermaid nesnese souběžné rendery – vše jde přes jednu frontu. */
+  function queueDiagram(target, source) {
+    diagramQueue = diagramQueue.then(() => renderMermaidElement(target, source)).catch(() => {});
+    return diagramQueue;
+  }
+
+  function observeDiagrams(blocks) {
     if (!window.mermaid) return;
-    configureMermaid();
+    diagramObserver ??= new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        diagramObserver.unobserve(entry.target);
+        pendingDiagrams.delete(entry.target);
+        queueDiagram(entry.target, entry.target.textContent);
+      }
+    }, { root: scroller(), rootMargin: "1200px 0px" });
+    for (const pending of [...pendingDiagrams]) {
+      if (!pending.isConnected) {
+        diagramObserver.unobserve(pending);
+        pendingDiagrams.delete(pending);
+      }
+    }
     for (const block of blocks) {
       for (const code of withSelf(block, "pre > code.language-mermaid")) {
-        if (!code.isConnected) continue;
-        await renderMermaidElement(code.parentElement, code.textContent);
+        pendingDiagrams.add(code.parentElement);
+        diagramObserver.observe(code.parentElement);
       }
     }
   }
 
-  async function rerenderMermaidForTheme() {
+  /** Vykreslí i diagramy mimo obrazovku (tisk, export, self-test). */
+  async function flushDiagrams() {
+    for (const pending of [...pendingDiagrams]) {
+      diagramObserver?.unobserve(pending);
+      pendingDiagrams.delete(pending);
+      if (pending.isConnected) queueDiagram(pending, pending.textContent);
+    }
+    await diagramQueue;
+  }
+
+  function rerenderMermaidForTheme() {
     if (!window.mermaid) return;
-    configureMermaid();
     for (const container of [...content().querySelectorAll(".mdv-mermaid")]) {
-      await renderMermaidElement(container, container.dataset.mermaidSource);
+      queueDiagram(container, container.dataset.mermaidSource);
     }
   }
 
@@ -332,7 +417,7 @@
       highlightCode(block);
       renderMath(block);
     }
-    await renderMermaid(blocks);
+    observeDiagrams(blocks);
   }
 
   // MARK: - API pro Swift
@@ -441,6 +526,7 @@
     setStatus,
     scrollToLine,
     topLine,
+    flushDiagrams,
     setFollowTail: (value) => { state.followTail = !!value; },
   };
 

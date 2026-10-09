@@ -98,6 +98,13 @@ struct MathTests {
         #expect(!html("$ x$").contains("math"))
     }
 
+    /// Nalezeno golden testem: matika začínající `$5` přeskočila až do code spanu za ní.
+    @Test func inlineMathDoesNotCrossCodeSpan() {
+        let output = html("Ceny $5 a $10. Kód `$y$`.")
+        #expect(!output.contains("math"))
+        #expect(output.contains("<code>$y$</code>"))
+    }
+
     @Test func codeSpanWins() {
         let output = html("`$x$`")
         #expect(output.contains("<code>$x$</code>"))
@@ -286,5 +293,35 @@ struct FrontMatterTests {
 
     @Test func unclosedIsNotFrontMatter() {
         #expect(MarkdownRenderer.render("---\ntitle: x\n\nText").frontMatter == nil)
+    }
+}
+
+@Suite("Emoji zkratky")
+struct EmojiTests {
+    @Test func replacesKnownShortcodes() {
+        #expect(html("Hotovo :tada: a :+1:").contains("Hotovo 🎉 a 👍"))
+    }
+
+    @Test func keepsUnknownAndTimes() {
+        let output = html("V 10:30:45 :neexistuje: a:b:c")
+        #expect(output.contains("V 10:30:45 :neexistuje: a:b:c"))
+    }
+
+    /// Hranice ověřené proti GitHub API.
+    @Test func boundariesLikeGitHub() {
+        let output = html("A (:tada:) B :tada:. D Hotovo:tada: E :tada:x G :tada:,:tada: H **:tada:** K :tada::tada:")
+        #expect(output.contains("A (:tada:) B :tada:. D Hotovo:tada: E :tada:x G :tada:,:tada: H <strong>🎉</strong> K 🎉🎉"))
+    }
+
+    @Test func notInCode() {
+        #expect(html("`:rocket:`").contains("<code>:rocket:</code>"))
+    }
+
+    @Test func slugIgnoresEmojiLikeGitHub() {
+        #expect(MarkdownRenderer.render("# Hello :rocket:").outline.first?.slug == "hello-")
+    }
+
+    @Test func canBeDisabled() {
+        #expect(html(":rocket:", RenderOptions(emoji: false)).contains(":rocket:"))
     }
 }

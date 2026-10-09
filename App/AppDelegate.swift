@@ -8,6 +8,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             PreferenceKey.pageZoom: 1.0,
         ])
         MainMenuExtras.install()
+        #if DEBUG
+        SelfTest.configureApplication()
+        #endif
     }
 
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool {

@@ -14,3 +14,6 @@ SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor
 // Bez App Sandboxu (osobní nástroj, sleduje libovolné cesty); hardened runtime ano.
 ENABLE_HARDENED_RUNTIME = YES
 ENABLE_APP_SANDBOX = NO
+
+// Ikona aplikace (App/Assets.xcassets, generuje scripts/make-icon.swift).
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
