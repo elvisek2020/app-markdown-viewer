@@ -39,6 +39,8 @@ check("alerts, footnotes, task listy, front matter",
 check("lokální obrázky přes mdv-file", bool(p1.get("images")) and all(i["loaded"] for i in p1["images"]))
 check("změna souboru nepřerenderuje diagram", isinstance(p2, dict) and p2.get("mermaidReused", 0) >= 1)
 check("rozbitý diagram ukazuje poslední platnou verzi", isinstance(p3, dict) and p3.get("mermaidStale", 0) >= 1)
+theme = r.get("themeSwitch", {})
+check("přepnutí vzhledu překreslí diagram", isinstance(theme, dict) and theme.get("mermaidSvg", 0) >= 1 and theme.get("mermaidReused") == 0)
 
 s = json.load(open(f"{work}/security.json"))["phase1"]
 check("security.md: žádné skripty, iframy, formuláře",

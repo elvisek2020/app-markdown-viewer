@@ -85,6 +85,13 @@ enum SelfTest {
                 if let snapshotPath { await saveSnapshot(of: webView, to: snapshotPath) }
                 modify(fileURL) { $0 + "\n\nPřidaný odstavec self-testu.\n" }
             } else if currentPhase == 2 {
+                // Přepnutí vzhledu musí diagramy překreslit (sonda je po fázi 2 označila).
+                let original = NSApp.appearance
+                NSApp.appearance = NSAppearance(named: NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .aqua : .darkAqua)
+                try? await Task.sleep(for: .seconds(1.5))
+                report["themeSwitch"] = await probe(webView: webView, world: world, phase: currentPhase)
+                NSApp.appearance = original
+                try? await Task.sleep(for: .seconds(1.5))
                 // Rozepsaný diagram (agent ho právě píše): poslední platná verze musí zůstat.
                 let broken = modify(fileURL) { $0.replacingOccurrences(of: "```mermaid\n", with: "```mermaid\nflowchart LR\n    Rozepsaný -->\n") }
                 if !broken {
