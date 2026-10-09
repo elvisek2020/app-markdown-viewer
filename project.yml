@@ -1,0 +1,47 @@
+# XcodeGen – .xcodeproj se generuje (`make gen`) a není v gitu.
+name: MDView
+options:
+  bundleIdPrefix: cz.elvisek
+  developmentLanguage: cs
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+packages:
+  MarkdownCore:
+    path: Packages/MarkdownCore
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+targets:
+  MDView:
+    type: application
+    platform: macOS
+    configFiles:
+      Debug: Config/App.xcconfig
+      Release: Config/App.xcconfig
+    sources:
+      - path: App
+        excludes:
+          - Info.plist
+      - path: CLI/mdv
+        buildPhase:
+          copyFiles:
+            destination: resources
+            subpath: bin
+    dependencies:
+      - package: MarkdownCore
+        product: MarkdownCore
+      - package: MarkdownCore
+        product: FileWatch
+      - package: MarkdownCore
+        product: WebAssets
+schemes:
+  MDView:
+    build:
+      targets:
+        MDView: all
+    run:
+      config: Debug
+    archive:
+      config: Release

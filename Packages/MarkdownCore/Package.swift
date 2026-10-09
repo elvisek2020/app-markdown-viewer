@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .library(name: "MarkdownCore", targets: ["MarkdownCore"]),
         .library(name: "FileWatch", targets: ["FileWatch"]),
+        .library(name: "WebAssets", targets: ["WebAssets"]),
     ],
     dependencies: [
         // Stejný parser jako GitHub (cmark-gfm). Pinováno přesně, Package.resolved je v gitu.
@@ -29,7 +30,9 @@ let package = Package(
             ]
         ),
         .target(name: "FileWatch"),
-        .testTarget(name: "MarkdownCoreTests", dependencies: ["MarkdownCore"]),
+        // Šablona, CSS, app.js a vendorované knihovny náhledu (aktualizace: web-vendor/update.sh).
+        .target(name: "WebAssets", resources: [.copy("Resources/web")]),
+        .testTarget(name: "MarkdownCoreTests", dependencies: ["MarkdownCore", "WebAssets"]),
         .testTarget(name: "FileWatchTests", dependencies: ["FileWatch"]),
     ]
 )

@@ -5,21 +5,29 @@ Nativní Markdown **viewer** (bez editoru) pro macOS 15+ na Apple Silicon. Plán
 ## Příkazy
 
 ```bash
-make test        # testy jádra (renderer + watcher) přes swift test
+make test        # testy jádra (renderer, watcher, politika odkazů) přes swift test
 make test-watch  # jen watcher
-make sim         # simulace zápisů agenta do /tmp/mdview-agent.md (SIM_FILE=…)
+make build       # XcodeGen + Debug build aplikace
+make install     # Release build → /Applications/MDView.app + symlink mdv do /opt/homebrew/bin
+make vendor      # aktualizace vendorovaných JS/CSS podle web-vendor/package.json
+
+scripts/selftest.sh [soubor.md]     # Debug self-test náhledu bez UI → JSON report (izolace JS, KaTeX, Mermaid, obrázky)
+scripts/selftest-sim.sh [scénář]     # zátěž auto-reloadu v reálné aplikaci, měří zpoždění náhledu
 ```
 
-**Nikdy nebuildit do repa.** Projekt leží v `~/Documents`, který synchronizuje iCloud Drive; buildové výstupy tam dostanou xattr od File Provideru a `codesign` selže. SwiftPM proto vždy s `--scratch-path ~/Library/Caches/MDView/spm` (dělá `Makefile`), Xcode používá DerivedData v `~/Library`.
+Ověřování UI dělej přes self-testy (`App/Web/SelfTest.swift`, jen Debug), ne přes ovládání obrazovky.
 
-Aplikační targety (XcodeGen `project.yml`, `make build/install`) přibudou ve fázi F1.
+**Nikdy nebuildit do repa.** Projekt leží v `~/Documents`, který synchronizuje iCloud Drive; buildové výstupy tam dostanou xattr od File Provideru a `codesign` selže. SwiftPM proto vždy s `--scratch-path ~/Library/Caches/MDView/spm` (dělá `Makefile`), Xcode používá DerivedData v `~/Library`.
 
 ## Architektura
 
 - `Packages/MarkdownCore` – lokální SPM balíček, vše testovatelné přes `swift test`:
   - `CMarkMath` – C syntax extension pro cmark-gfm (`$…$`, `$$…$$`, `` $`…`$ ``)
   - `MarkdownCore` – `MarkdownRenderer.render(_:options:)` → HTML s `data-sourcepos`, outline, front matter, features; GitHub alerts a kotvy nadpisů jako AST transformace
-  - `FileWatch` – `FileWatcher` (FSEvents na rodičovském adresáři + stat signatura + pojistný polling)
+  - `FileWatch` – `FileWatcher` (FSEvents na rodičovském adresáři + kqueue na inode + stat signatura + pojistný polling; po přesunu pryč a zpět se vrací na původní cestu)
+  - `WebAssets` – šablona, `app.css`, `app.js` (reconciliation bloků, kotva scrollu, Mermaid/KaTeX/hljs) a vendorované knihovny
+- `App/` – AppKit + read-only `NSDocument` (`MarkdownDocument`), `DocumentModel` (watcher + render na pozadí), `PreviewController` (WKWebView, isolated world `mdview`, `allowsContentJavaScript = false`), scheme handlery `mdv-asset://` a `mdv-file://`, `LinkOpener`
+- `CLI/mdv` se kopíruje do `MDView.app/Contents/Resources/bin`
 - Parser je `swiftlang/swift-cmark` pinovaný na přesnou verzi, `Package.resolved` je v gitu.
 
 ## Konvence

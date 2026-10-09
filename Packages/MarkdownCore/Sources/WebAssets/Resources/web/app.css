@@ -1,0 +1,130 @@
+/* MDView – rozložení náhledu a doplňky ke github-markdown-css. */
+
+:root {
+  --mdv-page: #ffffff;
+  --mdv-banner-bg: #fff8c5;
+  --mdv-banner-fg: #3b2300;
+  --mdv-banner-border: #d4a72c66;
+  --mdv-error: #d1242f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mdv-page: #0d1117;
+    --mdv-banner-bg: #272115;
+    --mdv-banner-fg: #e3b341;
+    --mdv-banner-border: #bb800966;
+    --mdv-error: #f85149;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--mdv-page);
+}
+
+#mdv-scroll {
+  position: fixed;
+  inset: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.markdown-body {
+  box-sizing: border-box;
+  max-width: 980px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 32px 48px 64px;
+}
+
+@media (max-width: 767px) {
+  .markdown-body {
+    padding: 16px;
+  }
+}
+
+/* Banner stavu souboru (smazán, čeká se na znovuvytvoření). */
+#mdv-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 8px 16px;
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--mdv-banner-bg);
+  color: var(--mdv-banner-fg);
+  border-bottom: 1px solid var(--mdv-banner-border);
+}
+
+#mdv-banner[hidden] {
+  display: none;
+}
+
+/* Ikony GitHub alerts – octicony jako maska, barvu dědí z .markdown-alert-title. */
+.mdv-octicon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  vertical-align: text-bottom;
+  background-color: currentColor;
+  mask: var(--mdv-icon) no-repeat center / contain;
+}
+
+.mdv-octicon-info { --mdv-icon: url(vendor/octicons/info-16.svg); }
+.mdv-octicon-light-bulb { --mdv-icon: url(vendor/octicons/light-bulb-16.svg); }
+.mdv-octicon-report { --mdv-icon: url(vendor/octicons/report-16.svg); }
+.mdv-octicon-alert { --mdv-icon: url(vendor/octicons/alert-16.svg); }
+.mdv-octicon-stop { --mdv-icon: url(vendor/octicons/stop-16.svg); }
+
+/* Matika. Display varianta je <span>, protože může stát uvnitř <p>. */
+.markdown-body .math-display {
+  display: block;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.markdown-body .math-inline .katex {
+  font-size: 1.05em;
+}
+
+/* Mermaid. */
+.markdown-body .mdv-mermaid {
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.markdown-body .mdv-mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-body pre.mdv-mermaid-error::before {
+  content: "Mermaid: " attr(data-error);
+  display: block;
+  margin-bottom: 8px;
+  color: var(--mdv-error);
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  white-space: pre-wrap;
+}
+
+/* Front matter. */
+.markdown-body .mdv-frontmatter td {
+  white-space: pre-wrap;
+  vertical-align: top;
+}
+
+.markdown-body details.mdv-frontmatter {
+  margin-bottom: 16px;
+}
+
+.markdown-body details.mdv-frontmatter summary {
+  cursor: pointer;
+  color: var(--fgColor-muted, #59636e);
+}

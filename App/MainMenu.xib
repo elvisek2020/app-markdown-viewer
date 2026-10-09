@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="11134" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="11134" />
+    </dependencies>
+    <objects>
+        <customObject id="-2" userLabel="File's Owner" customClass="NSApplication">
+            <connections>
+                <outlet property="delegate" destination="Voe-Tx-rLC" id="GzC-gU-4Uq" />
+            </connections>
+        </customObject>
+        <customObject id="-1" userLabel="First Responder" customClass="FirstResponder" />
+        <customObject id="-3" userLabel="Application" customClass="NSApplication" />
+        <customObject id="Voe-Tx-rLC" customClass="AppDelegate" customModuleProvider="target" />
+        <menu title="Main Menu" systemMenu="main" id="AYu-sK-qS6">
+            <items>
+                <menuItem title="MDView" id="1Xt-HY-uBw">
+                    <modifierMask key="keyEquivalentModifierMask" />
+                    <menu key="submenu" title="MDView" systemMenu="apple" id="uQy-DD-JDr">
+                        <items>
+                            <menuItem title="O aplikaci MDView" id="5kV-Vb-QxS">
+                                <modifierMask key="keyEquivalentModifierMask" />
+                                <connections>
+                                    <action selector="orderFrontStandardAboutPanel:" target="-1" id="Exp-CZ-Vem" />
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="VOq-y0-SEH" />
+                            <menuItem title="Služby" id="NMo-om-nkz">
+                                <modifierMask key="keyEquivalentModifierMask" />
+                                <menu key="submenu" title="Služby" systemMenu="services" id="hz9-B4-Xy5" />
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="4je-JR-u6R" />
+                            <menuItem title="Skrýt MDView" keyEquivalent="h" id="Olw-nP-bQN">
+                                <connections>
+                                    <action selector="hide:" target="-1" id="PnN-Uc-m68" />
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Skrýt ostatní" keyEquivalent="h" id="Vdr-fp-XzO">
+                                <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES" />
+                                <connections>
+                                    <action selector="hideOtherApplications:" target="-1" id="VT4-aY-XCT" />
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Zobrazit vše" id="Kd2-mp-pUS">
+                                <modifierMask key="keyEquivalentModifierMask" />
+                                <connections>
+                                    <action selector="unhideAllApplications:" target="-1" id="Dhg-Le-xox" />
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="kCx-OE-vgT" />
+                            <menuItem title="Ukončit MDView" keyEquivalent="q" id="4sb-4s-VLi">
+                                <connections>
+                                    <action selector="terminate:" target="-1" id="Te7-pn-YzF" />
+                                </connections>
+                            </menuItem>
+                        </items>
+                    </menu>
+                </menuItem>
+                <menuItem title="Soubor" id="dMs-cI-mzQ">
+                    <modifierMask key="keyEquivalentModifierMask" />
+                    <menu key="submenu" title="Soubor" id="bib-Uj-vzu">
+                        <items>
+                            <menuItem title="Otevřít…" keyEquivalent="o" id="IAo-SY-fd9">
+                                <connections>
+                                    <action selector="openDocument:" target="-1" id="bVn-NM-KNZ" />
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Otevřít nedávné" id="tXI-mr-wws">
+                                <modifierMask key="keyEquivalentModifierMask" />
+                                <menu key="submenu" title="Otevřít nedávné" systemMenu="recentDocuments" id="oas-Oc-fiZ">
+                                    <items>
+                                        <menuItem title="Vymazat nabídku" id="vNY-rz-j42">
+                                            <modifierMask key="keyEquivalentModifierMask" />
+                                            <connections>
+                                                <action selector="clearRecentDocuments:" target="-1" id="Daa-9d-B3U" />
+                                            </connections>
+                                        </menuItem>
+                                    </items>
+                                </menu>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="m54-Is-iLE" />
+                            <menuItem title="Zavřít" keyEquivalent="w" id="DVo-aG-piG">
+                                <connections>
+                                    <action selector="performClose:" target="-1" id="HmO-Ls-i7Q" />
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="aJh-i4-bef" />
+                            <menuItem title="Tisk…" keyEquivalent="p" id="aTl-1u-JFS">
+                                <connections>
+                                    <action selector="printDocument:" target="-1" id="qaZ-4w-aoO" />
+                                </connections>
+                            </menuItem>
+                        </items>
+                    </menu>
+                </menuItem>
+                <menuItem title="Úpravy" id="5QF-Oa-p0T">
+                    <modifierMask key="keyEquivalentModifierMask" />
+                    <menu key="submenu" title="Úpravy" id="W48-6f-4Dl">
+                        <items>
+                            <menuItem title="Kopírovat" keyEquivalent="c" id="x3v-GG-iWU">
+                                <connections>
+                                    <action selector="copy:" target="-1" id="G1f-GL-Joy" />
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Vybrat vše" keyEquivalent="a" id="Ruw-6m-B2m">
+                                <connections>
+                                    <action selector="selectAll:" target="-1" id="VNm-Mi-diN" />
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="uyl-h8-XO2" />
+                            <menuItem title="Hledat" id="4EN-yA-p0u">
+                                <modifierMask key="keyEquivalentModifierMask" />
+                                <menu key="submenu" title="Hledat" id="1b7-l0-nxx">
+                                    <items>
+                                        <menuItem title="Hledat…" tag="1" keyEquivalent="f" id="Xz5-n4-O0W">
+                                            <connections>
+                                                <action selector="performFindPanelAction:" target="-1" id="cD7-Qs-BN4" />
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Najít další" tag="2" keyEquivalent="g" id="q09-fT-Sye">
+                                            <connections>
+                                                <action selector="performFindPanelAction:" target="-1" id="NDo-RZ-v9R" />
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Najít předchozí" tag="3" keyEquivalent="G" id="OwM-mh-QMV">
+                                            <connections>
+                                                <action selector="performFindPanelAction:" target="-1" id="HOh-sY-3ay" />
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Použít výběr k hledání" tag="7" keyEquivalent="e" id="buJ-ug-pKt">
+                                            <connections>
+                                                <action selector="performFindPanelAction:" target="-1" id="U76-nv-p5D" />
+                                            </connections>
+                                        </menuItem>
+                                    </items>
+                                </menu>
+                            </menuItem>
+                        </items>
+                    </menu>
+                </menuItem>
+                <menuItem title="Zobrazení" id="H8h-7b-M4v">
+                    <modifierMask key="keyEquivalentModifierMask" />
+                    <menu key="submenu" title="Zobrazení" id="HyV-fh-RgO">
+                        <items>
+                            <menuItem title="Celá obrazovka" keyEquivalent="f" id="4J7-dP-txa">
+                                <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES" />
+                                <connections>
+                                    <action selector="toggleFullScreen:" target="-1" id="dU3-MA-1Rq" />
+                                </connections>
+                            </menuItem>
+                        </items>
+                    </menu>
+                </menuItem>
+                <menuItem title="Okno" id="aUF-d1-5bR">
+                    <modifierMask key="keyEquivalentModifierMask" />
+                    <menu key="submenu" title="Okno" systemMenu="window" id="Td7-aD-5lo">
+                        <items>
+                            <menuItem title="Minimalizovat" keyEquivalent="m" id="OY7-WF-poV">
+                                <connections>
+                                    <action selector="performMiniaturize:" target="-1" id="VwT-WD-YPe" />
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Zvětšit" id="R4o-n2-Eq4">
+                                <modifierMask key="keyEquivalentModifierMask" />
+                                <connections>
+                                    <action selector="performZoom:" target="-1" id="DIl-cC-cCs" />
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="eu3-7i-yIM" />
+                            <menuItem title="Převést vše do popředí" id="LE2-aR-0XJ">
+                                <modifierMask key="keyEquivalentModifierMask" />
+                                <connections>
+                                    <action selector="arrangeInFront:" target="-1" id="DRN-fu-gQh" />
+                                </connections>
+                            </menuItem>
+                        </items>
+                    </menu>
+                </menuItem>
+                <menuItem title="Nápověda" id="wpr-3q-Mcd">
+                    <modifierMask key="keyEquivalentModifierMask" />
+                    <menu key="submenu" title="Nápověda" systemMenu="help" id="F2S-fz-NVQ">
+                        <items>
+                            </items>
+                    </menu>
+                </menuItem>
+            </items>
+        </menu>
+    </objects>
+</document>

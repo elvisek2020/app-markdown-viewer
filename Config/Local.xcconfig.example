@@ -1,0 +1,4 @@
+// Zkopíruj jako Config/Local.xcconfig (je v .gitignore) a doplň svůj Team ID.
+// Team ID je v závorce u identity: security find-identity -v -p codesigning
+CODE_SIGN_IDENTITY = Apple Development
+DEVELOPMENT_TEAM = XXXXXXXXXX

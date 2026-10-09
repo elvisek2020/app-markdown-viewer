@@ -177,6 +177,26 @@ struct FileWatcherTests {
         #expect(await eventually { fixture.log.lastText == "po přejmenování" })
     }
 
+    /// git stash / dočasný přesun: soubor zmizí déle než grace perioda a pak se vrátí.
+    /// Watcher se nesmí „zaseknout“ na dočasné cestě (chyba nalezená zátěžovým testem v aplikaci).
+    @Test func returnsToOriginalPathAfterMoveAwayAndBack() async throws {
+        let fixture = try Fixture()
+        let away = fixture.directory.appendingPathComponent("doc.md.away")
+        try FileManager.default.moveItem(at: fixture.file, to: away)
+        #expect(await eventually {
+            fixture.log.events.contains { if case .moved(_, let to) = $0 { to.lastPathComponent == "doc.md.away" } else { false } }
+        })
+        try FileManager.default.moveItem(at: away, to: fixture.file)
+        // Hned potom uložení ve stylu vimu: původní inode se přejmenuje na zálohu a smaže.
+        let backup = fixture.directory.appendingPathComponent("doc.md~")
+        try FileManager.default.moveItem(at: fixture.file, to: backup)
+        try "po návratu".write(to: fixture.file, atomically: false, encoding: .utf8)
+        try FileManager.default.removeItem(at: backup)
+        #expect(await eventually { fixture.watcher.currentURL.lastPathComponent == "doc.md" })
+        #expect(await eventually { fixture.log.lastText == "po návratu" })
+        #expect(fixture.log.deletions == 0)
+    }
+
     @Test func ignoresUnrelatedFiles() async throws {
         let fixture = try Fixture()
         try "jiný".write(to: fixture.directory.appendingPathComponent("jiny.md"), atomically: true, encoding: .utf8)

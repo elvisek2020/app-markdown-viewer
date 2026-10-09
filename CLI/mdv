@@ -1,0 +1,55 @@
+#!/bin/sh
+# mdv – otevře Markdown soubory v MDView.
+#
+#   mdv soubor.md [další.md …]   otevře soubory (relativní cesty vůči aktuálnímu adresáři)
+#   mdv -g soubor.md             otevře na pozadí, terminál si nechá fokus
+#   příkaz | mdv -               uloží stdin do dočasného .md a otevře ho
+#   mdv                          spustí MDView
+#
+# Skript leží v MDView.app/Contents/Resources/bin a aplikaci hledá podle sebe,
+# aby `open -a MDView` nechytil jinou kopii (např. z DerivedData).
+
+set -eu
+
+SELF=$(readlink -f "$0")
+case "$SELF" in
+    */Contents/Resources/bin/*) APP=${SELF%/Contents/Resources/bin/*} ;;
+    *) APP=/Applications/MDView.app ;;
+esac
+
+BACKGROUND=""
+if [ "${1:-}" = "-g" ]; then
+    BACKGROUND="-g"
+    shift
+fi
+
+if [ $# -eq 0 ]; then
+    exec open $BACKGROUND -a "$APP"
+fi
+
+for arg in "$@"; do
+    if [ "$arg" = "-" ]; then
+        tmp=$(mktemp "${TMPDIR:-/tmp}/mdv-stdin.XXXXXX")
+        mv "$tmp" "$tmp.md"
+        cat > "$tmp.md"
+        set -- "$@" "$tmp.md"
+    elif [ -d "$arg" ]; then
+        echo "mdv: složky zatím nepodporuji: $arg" >&2
+        exit 1
+    elif [ ! -e "$arg" ]; then
+        echo "mdv: soubor neexistuje: $arg" >&2
+        exit 1
+    fi
+done
+
+# Argument „-“ nahradil dočasný soubor připojený na konec; samotné „-“ vynecháme.
+files=""
+for arg in "$@"; do
+    [ "$arg" = "-" ] && continue
+    files="$files
+$arg"
+done
+
+printf '%s\n' "$files" | sed '/^$/d' | while IFS= read -r file; do
+    open $BACKGROUND -a "$APP" "$file"
+done

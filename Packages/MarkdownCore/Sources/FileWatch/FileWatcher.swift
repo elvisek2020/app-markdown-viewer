@@ -65,6 +65,10 @@ public final class FileWatcher: @unchecked Sendable {
     private var isRunning = false
     private var stream: FSEventStreamRef?
     private var trackedDescriptor: Int32 = -1
+    private var trackedInode: UInt64?
+    /// Cesta před detekovaným přejmenováním. Objeví-li se na ní soubor znovu (git stash,
+    /// dočasný přesun), watcher se k ní vrátí.
+    private var originalPath: String?
     private var inodeSource: DispatchSourceFileSystemObject?
     private var lastSignature: FileSignature?
     private var lastData: Data?
@@ -170,6 +174,8 @@ public final class FileWatcher: @unchecked Sendable {
         let descriptor = open(filePath, O_EVTONLY)
         guard descriptor >= 0 else { return }
         trackedDescriptor = descriptor
+        var info = stat()
+        trackedInode = fstat(descriptor, &info) == 0 ? info.st_ino : nil
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: descriptor,
             eventMask: [.write, .extend, .attrib, .delete, .rename, .revoke],
@@ -186,6 +192,7 @@ public final class FileWatcher: @unchecked Sendable {
         inodeSource?.cancel()
         inodeSource = nil
         trackedDescriptor = -1
+        trackedInode = nil
     }
 
     private func retarget(to newPath: String) {
@@ -328,6 +335,7 @@ public final class FileWatcher: @unchecked Sendable {
     private func performCheck() {
         pendingSince = nil
         guard isRunning else { return }
+        returnToOriginalPathIfBack()
 
         guard let signature = FileSignature.read(path: filePath) else {
             handleMissingFile()
@@ -383,10 +391,13 @@ public final class FileWatcher: @unchecked Sendable {
             return
         }
 
-        // Přejmenování: inode držený přes fd žije pod jinou cestou (mimo Koš).
+        // Přejmenování: držený inode žije pod jinou cestou (mimo Koš). F_GETPATH u smazaného
+        // souboru vrací poslední známou cestu, proto se ověřuje, že tam leží opravdu tentýž inode.
         if trackedDescriptor >= 0, let newPath = Self.path(of: trackedDescriptor), newPath != filePath,
-           !newPath.contains("/.Trash/"), FileSignature.read(path: newPath) != nil {
+           !newPath.contains("/.Trash/"), let inode = trackedInode,
+           FileSignature.read(path: newPath)?.inode == inode {
             let previous = url
+            originalPath = originalPath ?? filePath
             retarget(to: newPath)
             missingSince = nil
             handler(.moved(from: previous, to: url))
@@ -398,6 +409,16 @@ public final class FileWatcher: @unchecked Sendable {
         isDeleted = true
         lastSignature = nil
         handler(.deleted(url))
+    }
+
+    private func returnToOriginalPathIfBack() {
+        guard let originalPath, originalPath != filePath, FileSignature.read(path: originalPath) != nil else { return }
+        let previous = url
+        self.originalPath = nil
+        retarget(to: originalPath)
+        missingSince = nil
+        lastSignature = nil
+        handler(.moved(from: previous, to: url))
     }
 
     /// Odřízne nedokončenou vícebajtovou UTF-8 sekvenci na konci (soubor se právě zapisuje).

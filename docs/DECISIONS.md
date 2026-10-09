@@ -10,19 +10,21 @@ Záznam architektonických rozhodnutí a výsledků spiků. Plné zdůvodnění 
 | D4 | Alerts a kotvy nadpisů: AST transformace ve Swiftu (custom block / custom inline) | implementováno |
 | D5 | Front matter: řádky nahrazeny prázdnými (sourcepos sedí), režimy tabulka / sbalené / skryté | implementováno |
 | D6 | Watcher: FSEvents na rodičovském adresáři + kqueue na aktuálním inode + stat signatura + pojistný polling | implementováno (S3) |
-| D7 | WebView: `allowsContentJavaScript = false`, skripty aplikace v dedikovaném `WKContentWorld` | čeká na S1 |
+| D7 | WebView: `allowsContentJavaScript = false`, skripty aplikace v dedikovaném `WKContentWorld` | ověřeno (S1) |
 | D8 | Zdrojový panel ve stejném WKWebView (ne TextKit 2) | přijato |
 | D9 | Podpis: Apple Development (Personal Team) bez provisioning profilu, záloha self-signed | čeká na S5 |
 | D10 | Testy: Swift Testing (CLT nemají XCTest) | přijato |
+| D12 | Vendor JS: verze starší než 2 týdny (supply chain); mermaid 11.17.2 místo čerstvé 12.0.0, npm v `~/Library/Caches` s `--ignore-scripts` | přijato |
+| D13 | Main menu z Xcode šablony `MainMenuDoc.xib`, přeložené do češtiny (systémové Open Recent funguje bez hacků) | přijato |
 | D11 | Build výstupy mimo repo (`~/Library/Caches/MDView`), protože `~/Documents` synchronizuje iCloud a xattr rozbíjejí codesign | přijato |
 
 ## Spiky
 
 | Spike | Cíl | Výsledek |
 |---|---|---|
-| S1 | Izolace JS (isolated world, Mermaid, KaTeX fonty, CSS Highlight API) | — |
+| S1 | Izolace JS (isolated world, Mermaid, KaTeX fonty, CSS Highlight API) | Hotovo přes `scripts/selftest.sh` (Debug self-test v reálném WKWebView): inline handler vložený mimo DOMPurify neběží, page world nevidí `mdv`, Mermaid 11 se v isolated worldu vykreslí, KaTeX včetně fontů přes `mdv-asset`, CSS Highlight API dostupné, obrázky přes `mdv-file`. Po změně souboru zůstává tentýž SVG uzel diagramu (reconciliation). |
 | S2 | Matika a věrnost GitHubu | Hotovo: C extension + 48 testů rendereru (matika vč. `$5 a $10`, code spanů, `\$`, odsazeného kódu, tabulky, citace a seznamu; alerts, slugy, front matter, sourcepos). Golden testy proti `gh api markdown` zbývají. |
-| S3 | Watcher | Hotovo: 13 testů stabilně zelených (5× po sobě). **Zjištění:** FSEvents hlásí změnu obsahu až při zavření souboru, ne při každém `write()`. Streamování do otevřeného souboru proto zachytí kqueue `DispatchSource` na drženém fd. 10min stres test přes `scripts/agent-sim.sh` zbývá s aplikací. |
+| S3 | Watcher | Hotovo: 13 testů stabilně zelených (5× po sobě). **Zjištění:** FSEvents hlásí změnu obsahu až při zavření souboru, ne při každém `write()`. Streamování do otevřeného souboru proto zachytí kqueue `DispatchSource` na drženém fd. **Zátěž v aplikaci** (`scripts/selftest-sim.sh`, 8 scénářů včetně 500 atomických zápisů): finální obsah 84–186 ms po posledním zápisu, žádné prázdné bliknutí, banner jen u smazání delšího než grace perioda. Zátěžový test našel chybu: po „přesunu pryč a zpět“ watcher zůstal na dočasné cestě; opraveno (návrat na původní cestu + ověření inode u přejmenování), pokryto testem. |
 | S4 | `NSDocument` jako viewer | — |
 | S5 | Quick Look, podpis, TCC | — |
 | S6 | Stránkování PDF | — |
