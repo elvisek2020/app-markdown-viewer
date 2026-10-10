@@ -42,7 +42,8 @@ install: release
 	pluginkit -e use -i cz.elvisek.mdview.quicklook
 	@qlmanage -r >/dev/null 2>&1; qlmanage -r cache >/dev/null 2>&1
 	@echo "Nainstalováno: $(INSTALL_DIR)/MDView.app, CLI: $(BIN_DIR)/mdv"
-	@if pgrep -qf "$(INSTALL_DIR)/MDView.app/Contents/MacOS/MDView"; then \
+	@# Vzor ukotvený na začátek – jinak by pgrep -f našel i tento shell (cesta je v jeho příkazu).
+	@if pgrep -qf "^$(INSTALL_DIR)/MDView.app/Contents/MacOS/MDView"; then \
 		echo "Pozor: MDView běží ze staré verze – ukonči ho (⌘Q) a spusť znovu."; \
 	fi
 
