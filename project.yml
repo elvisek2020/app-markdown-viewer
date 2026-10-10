@@ -36,11 +36,32 @@ targets:
         product: FileWatch
       - package: MarkdownCore
         product: WebAssets
+      - target: MDViewQuickLook
+  MDViewQuickLook:
+    type: app-extension
+    platform: macOS
+    configFiles:
+      Debug: Config/QuickLook.xcconfig
+      Release: Config/QuickLook.xcconfig
+    sources:
+      - path: QuickLook
+        excludes:
+          - Info.plist
+          - "*.entitlements"
+      # Sdílený základ náhledu s aplikací.
+      - path: App/Web/PreviewSupport.swift
+      - path: App/Web/SchemeHandlers.swift
+    dependencies:
+      - package: MarkdownCore
+        product: MarkdownCore
+      - package: MarkdownCore
+        product: WebAssets
 schemes:
   MDView:
     build:
       targets:
         MDView: all
+        MDViewQuickLook: all
     run:
       config: Debug
     archive:

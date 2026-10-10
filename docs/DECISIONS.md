@@ -26,6 +26,8 @@ Záznam architektonických rozhodnutí a výsledků spiků. Plné zdůvodnění 
 | D21 | Export HTML bez JS (styly, fonty KaTeX a lokální obrázky vložené); PDF a tisk přes `printOperation` + `runModal`, světlé téma, `shouldPrintBackgrounds`, nadpis drží s následujícím blokem | implementováno |
 | D22 | Ikony alertů jako inline SVG (CSS maska se netiskne), stejné jako na GitHubu | implementováno |
 | D23 | Self-test neukládá rámy oken ani rozdělení (Debug build sdílí předvolby s nainstalovanou aplikací) | implementováno |
+| D24 | Quick Look: view-based `QLPreviewingController` s WKWebView a sdíleným `PreviewSupport`; sandbox + `network.client` + read-only výjimka `/`; bez sítě (app.js i `WKContentRuleList`), bez Mermaidu | implementováno |
+| D25 | Diagnostika Quick Look přes `Logger` do systémového logu, zapínaná souborem v /tmp (kontejner je od macOS 14 zvenku nečitelný) | implementováno |
 | D11 | Build výstupy mimo repo (`~/Library/Caches/MDView`), protože `~/Documents` synchronizuje iCloud a xattr rozbíjejí codesign | přijato |
 
 ## Spiky
@@ -36,7 +38,7 @@ Záznam architektonických rozhodnutí a výsledků spiků. Plné zdůvodnění 
 | S2 | Matika a věrnost GitHubu | Hotovo: C extension + 48 testů rendereru (matika vč. `$5 a $10`, code spanů, `\$`, odsazeného kódu, tabulky, citace a seznamu; alerts, slugy, front matter, sourcepos). Golden testy proti `gh api markdown` zbývají. |
 | S3 | Watcher | Hotovo: 13 testů stabilně zelených (5× po sobě). **Zjištění:** FSEvents hlásí změnu obsahu až při zavření souboru, ne při každém `write()`. Streamování do otevřeného souboru proto zachytí kqueue `DispatchSource` na drženém fd. **Zátěž v aplikaci** (`scripts/selftest-sim.sh`, 8 scénářů včetně 500 atomických zápisů): finální obsah 84–186 ms po posledním zápisu, žádné prázdné bliknutí, banner jen u smazání delšího než grace perioda. Zátěžový test našel chybu: po „přesunu pryč a zpět“ watcher zůstal na dočasné cestě; opraveno (návrat na původní cestu + ověření inode u přejmenování), pokryto testem. |
 | S4 | `NSDocument` jako viewer | — |
-| S5 | Quick Look, podpis, TCC | — |
+| S5 | Quick Look, podpis, TCC | Hotovo: rozšíření podepsané Apple Development se načte; po registraci je ve výchozím stavu vypnuté, `make install` ho povolí (`pluginkit -e use`); relativní obrázky ve složce Dokumenty vyžadují jednorázový souhlas TCC pro MDView (přisuzuje se aplikaci, ne rozšíření). |
 | S6 | Stránkování PDF | — |
 
 ## Golden testy (F2)
@@ -66,3 +68,19 @@ Chyby nalezené při F3:
 - **Vzhled:** znovu se nastavoval při každé notifikaci UserDefaults (třeba při uložení rámu okna) a přepisoval dočasný vzhled.
 - **Velikost okna:** `NSHostingController` osnovy zmenšil okno bez uloženého rámu na výšku seznamu. Oprava: `sizingOptions = []`.
 - **Předvolby:** self-test ukládal rámy oken do předvoleb nainstalované aplikace.
+
+## F4: Quick Look
+
+`scripts/quicklook-check.sh` ověřuje nainstalovanou aplikaci:
+- jediná, povolená registrace z /Applications
+- vykreslení: KaTeX, kód, alerts s ikonami, relativní obrázek
+- JS z dokumentu neběží
+- ukázka za ~160 ms a 100KB dokument (1892 bloků, 244 vzorců, 61 obrázků) za ~340 ms
+- obrázek z internetu zablokovaný
+
+Poznatky:
+- **Registrace:** nově zaregistrované rozšíření třetí strany je vypnuté (`pluginkit -m` ho bez `-D` vůbec neukáže).
+- **Kontejner rozšíření:** od macOS 14 je zvenku nečitelný (`Operation not permitted`).
+- **`log` v zsh:** je to vestavěný příkaz, systémový log se musí volat jako `/usr/bin/log`.
+- **Délka logu:** dlouhé zprávy systémový log ořízne, takže report musí být krátký.
+- **TCC:** čtení obrázku vedle souboru ve složce Dokumenty vyvolá žádost TCC (`kTCCServiceSystemPolicyDocumentsFolder`) pro MDView.

@@ -5,6 +5,13 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 APP="$HOME/Library/Caches/MDView/DerivedData/Build/Products/Debug/MDView.app"
+# Spuštěný Debug build se registruje u LaunchServices; po testu odregistrovat, aby jeho
+# Quick Look rozšíření nesoupeřilo s nainstalovanou aplikací.
+cleanup() {
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u "$APP" 2>/dev/null || true
+    pluginkit -r "$APP/Contents/PlugIns/MDViewQuickLook.appex" 2>/dev/null || true
+}
+trap cleanup EXIT
 WORK=$(mktemp -d /tmp/mdview-sim.XXXXXX)
 FILE="$WORK/agent.md"
 STATUS="$WORK/status.jsonl"

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Quick Look rozšíření musí běžet v sandboxu. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- WKWebView v sandboxu bez tohoto oprávnění zůstane prázdný; síťové požadavky stránky
+	     přesto blokuje pravidlo obsahu a CSP. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!-- Jen čtení: relativní obrázky vedle náhledovaného souboru (sandbox jinak dovolí jen soubor samotný). -->
+	<key>com.apple.security.temporary-exception.files.absolute-path.read-only</key>
+	<array>
+		<string>/</string>
+	</array>
+</dict>
+</plist>

@@ -24,6 +24,7 @@
 - **Zdrojový panel.** Zvýrazněný Markdown s čísly řádků vedle náhledu, se synchronizovaným scrollem oběma směry. Skok na nadpis zarovná oba panely na stejný řádek.
 - **Osnova, hledání a export.** Osnova dokumentu v postranním panelu zvýrazňuje aktuální sekci. Hledání ukazuje počet výsledků a volitelně ignoruje diakritiku. Export do samostatného HTML (bez skriptů, vše vložené) a do PDF, tisk vždy ve světlém tématu se stránkováním, které nerozdělí bloky.
 - **Nativní AppKit aplikace.** Taby, Otevřít nedávné, obnova oken včetně pozice, světlý i tmavý režim, zoom a nastavení.
+- **Quick Look.** Mezerník ve Finderu ukáže náhled se stejným vykreslením jako aplikace. Běží v sandboxu, bez sítě a bez Mermaidu (diagram zůstane jako kód). 100KB dokument zobrazí zhruba za 0,35 s.
 - **CLI `mdv`** pro otevírání souborů z terminálu.
 
 <p align="center">
@@ -43,6 +44,8 @@ make install
 ```
 
 `make install` sestaví Release a zkopíruje `MDView.app` do `/Applications`. Příkaz `mdv` nalinkuje do `/opt/homebrew/bin`.
+
+`make install` zároveň zaregistruje a povolí Quick Look rozšíření. Ověříš to v Nastavení systému → Obecné → Položky při přihlášení a rozšíření → Quick Look, nebo přes `make ql-status`. Když náhled souboru ve složce Dokumenty načítá obrázky vedle něj, macOS se jednou zeptá na přístup MDView ke složce Dokumenty.
 
 Podpis je ve výchozím stavu ad-hoc. Pro stabilní identitu zkopíruj `Config/Local.xcconfig.example` do `Config/Local.xcconfig` a doplň Team ID. macOS si pak udělená oprávnění, třeba k `~/Documents`, pamatuje i po dalších buildech.
 
@@ -76,6 +79,7 @@ claude -p "Navrhni architekturu" | mdv -
 make test                # renderer, golden testy proti GitHubu, watcher (swift test)
 make build               # XcodeGen + Debug build
 scripts/ci-integration.sh  # integrační testy v aplikaci (náhled, bezpečnost, hledání, export, synchronizace, zátěž)
+scripts/quicklook-check.sh # Quick Look nainstalované aplikace (registrace, vykreslení, rychlost, bez sítě)
 scripts/gh-golden.sh     # obnoví referenční výstupy GitHubu pro golden testy
 scripts/readme-images.sh # ikona a snímky do README
 make vendor              # aktualizace přibalených knihoven (web-vendor/package.json)

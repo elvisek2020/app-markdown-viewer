@@ -51,5 +51,7 @@ jobs:
             /tmp/mdview-sim.*/
           if-no-files-found: ignore
 
-      - name: Build aplikace (Release)
-        run: make release
+      - name: Instalace a Quick Look
+        run: |
+          make install
+          LIMIT_MS=1500 scripts/quicklook-check.sh

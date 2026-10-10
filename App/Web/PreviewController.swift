@@ -8,7 +8,7 @@ import WebKit
 /// Šablona se načte jednou, další rendery se do ní posílají přes `mdv.update` bez reloadu.
 /// Hledání je v `PreviewController+Find.swift`, export a tisk v `PreviewController+Export.swift`.
 final class PreviewController: NSViewController, ViewerActions, NSMenuItemValidation {
-    static let world = WKContentWorld.world(name: "mdview")
+    static let world = PreviewSupport.world
 
     let model: DocumentModel
     private(set) var webView: PreviewWebView!
@@ -45,25 +45,7 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     }
 
     override func loadView() {
-        let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .nonPersistent()
-        configuration.defaultWebpagePreferences.allowsContentJavaScript = false
-        // Tisk a PDF i s pozadím (bloky kódu, záhlaví tabulek, ikony alertů kreslené maskou).
-        configuration.preferences.shouldPrintBackgrounds = true
-        configuration.setURLSchemeHandler(AssetSchemeHandler(), forURLScheme: AssetSchemeHandler.scheme)
-        configuration.setURLSchemeHandler(LocalFileSchemeHandler(), forURLScheme: LinkPolicy.fileScheme)
-
-        let userContent = configuration.userContentController
-        userContent.add(WeakMessageHandler(self), contentWorld: Self.world, name: "mdv")
-        for path in WebAssets.coreScripts {
-            userContent.addUserScript(WKUserScript(
-                source: WebAssets.text(path),
-                injectionTime: .atDocumentEnd,
-                forMainFrameOnly: true,
-                in: Self.world
-            ))
-        }
-
+        let configuration = PreviewSupport.makeConfiguration(messageHandler: WeakMessageHandler(self))
         let webView = PreviewWebView(frame: NSRect(x: 0, y: 0, width: 920, height: 1000), configuration: configuration)
         webView.navigationDelegate = self
         webView.uiDelegate = self
@@ -117,13 +99,10 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         pending = nil
         isUpdating = true
         Task {
-            await loadLibraries(for: document.features)
-            let directory = model.url.deletingLastPathComponent()
-            var baseURL = LinkPolicy.previewURL(forFile: directory).absoluteString
-            if !baseURL.hasSuffix("/") { baseURL += "/" }
+            loadedLibraries = await PreviewSupport.loadLibraries(for: document.features, into: webView, alreadyLoaded: loadedLibraries)
             var payload: [String: Any] = [
                 "html": document.html,
-                "baseURL": baseURL,
+                "baseURL": PreviewSupport.baseURL(for: model.url),
                 "restoreLine": hasContent ? 0 : (restoreLine ?? 0),
                 "remoteImages": Preferences.remoteImages,
             ]
@@ -143,27 +122,6 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
             }
             isUpdating = false
             flush()
-        }
-    }
-
-    /// Velké knihovny se vkládají až podle obsahu dokumentu (Mermaid má 3,5 MB).
-    private func loadLibraries(for features: DocumentFeatures) async {
-        var needed: [WebAssets.Library] = []
-        if features.contains(.code) { needed.append(.highlight) }
-        if features.contains(.math) { needed += [.katex, .katexCopyTex] }
-        if features.contains(.mermaid) { needed.append(.mermaid) }
-        for library in needed where !loadedLibraries.contains(library) {
-            // evaluateJavaScript (ne callAsyncJavaScript): top-level `var` musí skončit v globálním objektu worldu.
-            let source = WebAssets.text(library.rawValue) + "\n;true"
-            let loaded: Bool = await withCheckedContinuation { continuation in
-                webView.evaluateJavaScript(source, in: nil, in: Self.world) { result in
-                    if case .failure(let error) = result {
-                        NSLog("MDView: knihovna \(library.rawValue) se nenačetla: \(error)")
-                    }
-                    continuation.resume(returning: (try? result.get()) != nil)
-                }
-            }
-            if loaded { loadedLibraries.insert(library) }
         }
     }
 

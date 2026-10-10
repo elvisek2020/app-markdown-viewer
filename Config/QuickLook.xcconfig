@@ -1,0 +1,13 @@
+// Quick Look rozšíření MDView (vkládá se do MDView.app/Contents/PlugIns).
+#include "Signing.xcconfig"
+
+PRODUCT_NAME = MDViewQuickLook
+PRODUCT_BUNDLE_IDENTIFIER = cz.elvisek.mdview.quicklook
+INFOPLIST_FILE = QuickLook/Info.plist
+GENERATE_INFOPLIST_FILE = NO
+CODE_SIGN_ENTITLEMENTS = QuickLook/MDViewQuickLook.entitlements
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks
+SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor
+ENABLE_HARDENED_RUNTIME = YES
+APPLICATION_EXTENSION_API_ONLY = YES
+SKIP_INSTALL = YES
