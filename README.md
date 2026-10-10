@@ -39,17 +39,24 @@
 
 ## Instalace
 
-### Bez buildu
+### Stažení
 
 Požadavky: macOS 15+, Apple Silicon.
+
+Stáhni **[MDView.dmg](https://github.com/elvisek2020/app-markdown-viewer/releases/latest/download/MDView.dmg)** (poslední vydání, starší jsou v [Releases](https://github.com/elvisek2020/app-markdown-viewer/releases)), otevři ho a přetáhni MDView do složky Aplikace.
+
+Aplikace je podepsaná, ale není notarizovaná. Při prvním spuštění macOS ohlásí, že ji nemůže ověřit. Otevři Nastavení systému → Soukromí a zabezpečení a klikni na Přesto otevřít. Totéž zařídí v Terminálu `xattr -dr com.apple.quarantine /Applications/MDView.app`.
+
+- Příkaz `mdv`: `ln -sf /Applications/MDView.app/Contents/Resources/bin/mdv /opt/homebrew/bin/mdv`.
+- Quick Look se zaregistruje při prvním spuštění aplikace. Když mezerník ve Finderu náhled MDView neukáže, zapni ho v Nastavení systému → Obecné → Položky při přihlášení a rozšíření → Quick Look.
+
+### Z Terminálu
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/elvisek2020/app-markdown-viewer/main/install.sh | bash
 ```
 
-Skript stáhne poslední vydání z [Releases](https://github.com/elvisek2020/app-markdown-viewer/releases) a nainstaluje `MDView.app` do `/Applications`. Příkaz `mdv` nalinkuje do `/opt/homebrew/bin` (nebo `/usr/local/bin`) a zaregistruje Quick Look. Stejným příkazem se aplikace aktualizuje. Konkrétní verzi nainstaluješ přes `MDV_VERSION=20261010.1754`.
-
-Aplikace je podepsaná, ale není notarizovaná. Když `MDView.zip` stáhneš ručně přes prohlížeč, macOS ji při prvním spuštění zablokuje. Povolíš ji v Nastavení systému → Soukromí a zabezpečení → Přesto otevřít.
+Skript stáhne poslední vydání a nainstaluje `MDView.app` do `/Applications`. Příkaz `mdv` nalinkuje do `/opt/homebrew/bin` (nebo `/usr/local/bin`) a zaregistruje Quick Look. Ověření v Nastavení systému odpadá, protože curl soubor neoznačí jako stažený z internetu. Stejným příkazem se aplikace aktualizuje. Konkrétní verzi nainstaluješ přes `MDV_VERSION=20261010.1754`.
 
 Odinstalace: `rm -rf /Applications/MDView.app "$(which mdv)"`.
 
@@ -114,8 +121,8 @@ scripts/quicklook-check.sh # Quick Look nainstalované aplikace (registrace, vyk
 scripts/gh-golden.sh     # obnoví referenční výstupy GitHubu pro golden testy
 scripts/readme-images.sh # ikona a snímky do README
 make vendor              # aktualizace přibalených knihoven (web-vendor/package.json)
-make package             # podepsaný Release build v zipu pro instalaci bez buildu
-make publish             # vydání na GitHub Releases (tag v<verze>, asset MDView.zip)
+make package             # podepsaný Release build jako MDView.dmg a MDView.zip (install.sh)
+make publish             # vydání na GitHub Releases (tag v<verze>, assety MDView.dmg a MDView.zip)
 ```
 
 Licence knihoven třetích stran: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
