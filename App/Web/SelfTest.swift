@@ -58,6 +58,7 @@ enum SelfTest {
     /// aplikací, takže self-test nesmí ukládat rámy oken a rozdělení do jejích předvoleb.
     static var isActive: Bool {
         reportPath != nil || statusPath != nil || snapshotPath != nil || WorkspaceSelfTest.reportPath != nil
+            || UserDefaults.standard.string(forKey: "MDViewSelfTestIconPath") != nil
             || WindowFrameSelfTest.isActive
     }
 
@@ -68,6 +69,23 @@ enum SelfTest {
     /// Volá se při startu aplikace.
     @MainActor
     static func configureApplication() {
+        // Diagnostika ikony: uloží NSApp.applicationIconImage (tu dostává Dock) do PNG a ukončí aplikaci.
+        if let iconPath = UserDefaults.standard.string(forKey: "MDViewSelfTestIconPath") {
+            let icon = NSApp.applicationIconImage ?? NSImage()
+            let names = icon.representations.map { "\(type(of: $0)) \($0.pixelsWide)×\($0.pixelsHigh)" }
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: 256, pixelsHigh: 256, bitsPerSample: 8, samplesPerPixel: 4,
+                hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+            )!
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+            icon.draw(in: NSRect(x: 0, y: 0, width: 256, height: 256))
+            NSGraphicsContext.restoreGraphicsState()
+            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: iconPath))
+            try? names.joined(separator: "\n").write(toFile: iconPath + ".txt", atomically: true, encoding: .utf8)
+            NSApp.terminate(nil)
+            return
+        }
         if UserDefaults.standard.string(forKey: "MDViewSelfTestAppearance") == "dark" {
             NSApp.appearance = NSAppearance(named: .darkAqua)
         } else if reportPath != nil {
