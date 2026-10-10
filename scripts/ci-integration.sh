@@ -22,10 +22,12 @@ import json, re, sys
 work, limit = sys.argv[1], int(sys.argv[2])
 failures = []
 
-def check(name, condition):
+def check(name, condition, detail=None):
     print(("✓ " if condition else "✘ ") + name)
     if not condition:
         failures.append(name)
+        if detail is not None:
+            print(f"    detail: {json.dumps(detail, ensure_ascii=False)}")
 
 r = json.load(open(f"{work}/showcase.json"))
 p1, p2, p3 = r.get("phase1", {}), r.get("phase2", {}), r.get("phase3", {})
@@ -47,12 +49,12 @@ check("hledání (i bez diakritiky)", f3.get("findPozn", 0) >= 3 and f3.get("fin
 html = f3.get("html", {})
 check("export HTML: bez skriptů, vložené fonty a obrázky",
       isinstance(html, dict) and html.get("scripts") == 0 and html.get("svg") and html.get("katexFonts")
-      and html.get("inlinedImage") and html.get("mdvURLs") == 0 and not html.get("sourcepos"))
+      and html.get("inlinedImage") and html.get("mdvURLs") == 0 and not html.get("sourcepos"), html)
 pdf = f3.get("pdf", {})
-check("export PDF: stránkovaný a s poslední stranou", isinstance(pdf, dict) and pdf.get("pages", 0) >= 2 and pdf.get("lastPageHasEnd"))
+check("export PDF: stránkovaný a s poslední stranou", isinstance(pdf, dict) and pdf.get("pages", 0) >= 2 and pdf.get("lastPageHasEnd"), pdf)
 sync = f3.get("sync", {})
-check("skok na nadpis zarovná zdroj na stejný řádek", f3.get("sourceReady") and abs(sync.get("sourceTop", 0) - sync.get("alerts", -9)) <= 0.5)
-check("synchronizace zdroj → náhled", sync.get("previewAfterSource") == sync.get("table"))
+check("skok na nadpis zarovná zdroj na stejný řádek", f3.get("sourceReady") and abs(sync.get("sourceTop", 0) - sync.get("alerts", -9)) <= 0.5, sync)
+check("synchronizace zdroj → náhled", sync.get("previewAfterSource") == sync.get("table"), sync)
 
 s = json.load(open(f"{work}/security.json"))["phase1"]
 check("security.md: žádné skripty, iframy, formuláře",

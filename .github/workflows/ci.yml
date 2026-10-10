@@ -40,5 +40,16 @@ jobs:
       - name: Integrační testy v aplikaci
         run: scripts/ci-integration.sh
 
+      - name: Artefakty integračních testů
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrace
+          path: |
+            /tmp/mdview-ci.*/
+            /tmp/mdview-selftest.*/
+            /tmp/mdview-sim.*/
+          if-no-files-found: ignore
+
       - name: Build aplikace (Release)
         run: make release
