@@ -1,6 +1,6 @@
 # MDView – pokyny pro agenty
 
-Nativní Markdown **viewer** (bez editoru) pro macOS 15+ na Apple Silicon. Plán a fáze: `docs/PLAN.md`, rozhodnutí: `docs/DECISIONS.md`.
+Nativní Markdown **viewer** s jednoduchým režimem úprav pro macOS 15+ na Apple Silicon. Plán a fáze: `docs/PLAN.md`, rozhodnutí: `docs/DECISIONS.md` (režim úprav: D32).
 
 ## Příkazy
 
@@ -18,6 +18,7 @@ scripts/gh-golden.sh [fixture]          # referenční výstupy GitHub API pro g
 scripts/readme-images.sh                # ikona + snímky náhledu do README (docs/images)
 scripts/quicklook-check.sh              # Quick Look nainstalované aplikace (po make install)
 scripts/selftest-workspace.sh           # pracovní složka: strom, výchozí výběr, režim sledování
+scripts/selftest-edit.sh                # režim úprav: ukládání, tichý reload, konflikt se zápisem agenta
 scripts/selftest-window.sh              # paměť pozice a velikosti okna
 make ql-status                          # registrace Quick Look rozšíření
 ```
@@ -31,9 +32,10 @@ Ověřování UI dělej přes self-testy (`App/Web/SelfTest.swift`, jen Debug), 
 - `Packages/MarkdownCore` – lokální SPM balíček, vše testovatelné přes `swift test`:
   - `CMarkMath` – C syntax extension pro cmark-gfm (`$…$`, `$$…$$`, `` $`…`$ ``)
   - `MarkdownCore` – `MarkdownRenderer.render(_:options:)` → HTML s `data-sourcepos`, outline, front matter, features; GitHub alerts a kotvy nadpisů jako AST transformace
-  - `FileWatch` – `FileWatcher` (FSEvents na rodičovském adresáři + kqueue na inode + stat signatura + pojistný polling; po přesunu pryč a zpět se vrací na původní cestu)
+  - `FileWatch` – `FileWatcher` (FSEvents na rodičovském adresáři + kqueue na inode + stat signatura + pojistný polling; po přesunu pryč a zpět se vrací na původní cestu), `EditSync` (stav disk ↔ editor: vlastní zápisy, tichý reload, konflikt)
   - `WebAssets` – šablona, `app.css`, `app.js` (reconciliation bloků, kotva scrollu, Mermaid/KaTeX/hljs) a vendorované knihovny
-- `App/` – AppKit + read-only `NSDocument` (`MarkdownDocument`), `DocumentModel` (watcher + render na pozadí, víc odběratelů), `DocumentWindowController` (osnova ve SwiftUI | náhled, nástrojová lišta), `PreviewController` (+Find, +Export; WKWebView, isolated world `mdview`, `allowsContentJavaScript = false`), scheme handlery `mdv-asset://` a `mdv-file://`, `LinkOpener`, `HTMLExporter`, `Preferences` + okno Nastavení
+- `App/` – AppKit + `NSDocument` (`MarkdownDocument`; ukládá `DocumentModel`, ne NSDocument), `DocumentModel` (watcher + render na pozadí, víc odběratelů, v režimu úprav automatické ukládání), `DocumentWindowController` (osnova ve SwiftUI | náhled, nástrojová lišta), `PreviewController` (+Find, +Export, +Edit; WKWebView, isolated world `mdview`, `allowsContentJavaScript = false`), scheme handlery `mdv-asset://` a `mdv-file://`, `LinkOpener`, `HTMLExporter`, `Preferences` + okno Nastavení
+- `App/Editor/` – režim úprav: `MarkdownEditor` (`NSTextView`, TextKit 1, vzniká až při zapnutí – start aplikace nesmí zpomalit), `PreviewContainerView` (banner + split editor | náhled), `EditBanner`, `DiffSheet`. Kód volaný tiskem na pozadí (předci webview) musí být `nonisolated`.
 - Debug build sdílí bundle ID a předvolby s nainstalovanou aplikací – self-testy nesmí zapisovat do UserDefaults (rámy oken apod.).
 - `App/Workspace/` – pracovní složka (`WorkspaceDocument` pro `public.folder`, `WorkspaceWindowController` se stromem ve SwiftUI a režimem sledování, `ViewerDocumentController` pro výběr složek v Otevřít…); index a hlídání složky jsou ve FileWatch (`FolderIndex`, `FolderWatcher`).
 - Cesty v pracovní složce vždy přes `resolvingSymlinksInPath()` (FSEvents hlásí `/private/var…`, URL normalizace `/private` odstraňuje).

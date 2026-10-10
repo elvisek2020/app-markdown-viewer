@@ -5,6 +5,7 @@ import AppKit
 @objc protocol ViewerActions {
     func reloadDocument(_ sender: Any?)
     func toggleSourcePane(_ sender: Any?)
+    func toggleEditMode(_ sender: Any?)
     func toggleFollowTail(_ sender: Any?)
     func zoomInPreview(_ sender: Any?)
     func zoomOutPreview(_ sender: Any?)
@@ -35,6 +36,10 @@ enum MainMenuExtras {
         }
 
         if let file = submenu(in: mainMenu, containing: #selector(NSDocumentController.openDocument(_:))) {
+            // ⌘S jen v režimu úprav (validuje PreviewController); jinak se ukládá samo nebo vůbec.
+            if let close = file.items.firstIndex(where: { $0.action == #selector(NSWindow.performClose(_:)) }) {
+                file.insertItem(item("Uložit", #selector(NSDocument.save(_:)), "s", [.command]), at: close + 1)
+            }
             let index = (file.items.firstIndex { $0.submenu != nil } ?? 1) + 1
             let items: [NSMenuItem] = [
                 .separator(),
@@ -71,6 +76,26 @@ enum MainMenuExtras {
             appearance.submenu = AppearanceController.shared.makeMenu()
             view.insertItem(appearance, at: items.count)
             view.insertItem(.separator(), at: items.count + 1)
+        }
+
+        // Úpravy: menu vieweru mělo jen Kopírovat a Vybrat vše; editor potřebuje i zpět a schránku
+        // (NSTextView dostává ⌘Z, ⌘X, ⌘V jen přes položky menu).
+        if let edit = submenu(in: mainMenu, containing: #selector(NSText.copy(_:))) {
+            let top: [NSMenuItem] = [
+                item("Režim úprav", #selector(ViewerActions.toggleEditMode(_:)), "e", [.command, .option]),
+                .separator(),
+                item("Zpět", Selector(("undo:")), "z", [.command]),
+                item("Znovu", Selector(("redo:")), "z", [.command, .shift]),
+                .separator(),
+                item("Vyjmout", #selector(NSText.cut(_:)), "x", [.command]),
+            ]
+            for (offset, menuItem) in top.enumerated() {
+                edit.insertItem(menuItem, at: offset)
+            }
+            if let copy = edit.items.firstIndex(where: { $0.action == #selector(NSText.copy(_:)) }) {
+                edit.insertItem(item("Vložit", #selector(NSText.paste(_:)), "v", [.command]), at: copy + 1)
+                edit.insertItem(item("Smazat", #selector(NSText.delete(_:)), "", []), at: copy + 2)
+            }
         }
 
         // Úpravy → Hledat: standardní performFindPanelAction: by zachytil WKWebView; vlastní akce

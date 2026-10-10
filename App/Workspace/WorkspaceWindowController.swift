@@ -15,6 +15,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
     private var model: DocumentModel?
     private var searchItem: NSSearchToolbarItem?
     private var sourceButton: NSButton?
+    private var editButton: NSButton?
     private var followButton: NSButton?
     private var frameMemory: WindowFrameMemory?
     private var scanGeneration = 0
@@ -62,7 +63,12 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
             frameMemory = WindowFrameMemory(window: window, name: name)
         }
 
-        state.onSelect = { [weak self] path in self?.select(path: path) }
+        // Až po aktualizaci SwiftUI seznamu – přepnutí může v režimu úprav otevřít modální dotaz.
+        state.onSelect = { [weak self] path in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { self?.select(path: path) }
+            }
+        }
         rescan()
         let watcher = FolderWatcher(root: self.folder, extensions: LinkPolicy.markdownExtensions) { [weak self] change in
             DispatchQueue.main.async {
@@ -81,8 +87,14 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
     override func close() {
         folderWatcher?.stop()
         folderWatcher = nil
+        if let model, model.isEditing { model.save(force: true) }
         model?.stop()
         super.close()
+    }
+
+    /// `false` = uživatel zrušil (konflikt nebo chyba ukládání v režimu úprav).
+    func prepareToClose() -> Bool {
+        preview?.prepareToLeaveEditing(cancellable: true) ?? true
     }
 
     /// Obnova po relaunchi (z `WorkspaceDocument.restoreState`).
@@ -136,7 +148,8 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
 
     private func folderChanged(_ change: FolderWatcher.Change) {
         rescan()
-        guard state.isFollowing, !change.paths.isEmpty else { return }
+        // V režimu úprav sledování nepřepíná – editor nesmí uživateli zmizet pod rukama.
+        guard state.isFollowing, !change.paths.isEmpty, preview?.isEditing != true else { return }
         // Agent mohl zapsat víc souborů najednou – vybrat naposledy změněný, který existuje.
         let candidates = change.paths.compactMap { path -> (String, Date)? in
             let url = URL(fileURLWithPath: path)
@@ -156,6 +169,13 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), !isDirectory.boolValue else { return }
         guard path != state.selectedPath || preview == nil else { return }
+        let wasEditing = preview?.isEditing ?? false
+        if let old = preview, wasEditing, !old.prepareToLeaveEditing(cancellable: true) {
+            // Zrušeno – vrátit výběr ve stromu na upravovaný soubor.
+            let current = state.selectedPath
+            state.selectedPath = current
+            return
+        }
         let url = URL(fileURLWithPath: path)
         let newModel = DocumentModel(url: url)
         do {
@@ -170,6 +190,10 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
 
         let newPreview = PreviewController(model: newModel)
         newPreview.onSourceVisibilityChange = { [weak self] visible in self?.sourceButton?.state = visible ? .on : .off }
+        newPreview.onEditModeChange = { [weak self] editing in
+            self?.editButton?.state = editing ? .on : .off
+            self?.sourceButton?.isEnabled = !editing
+        }
         if let old = preview {
             if old.isSourceVisible { newPreview.setSourceVisible(true) }
             old.view.removeFromSuperview()
@@ -183,6 +207,8 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
         ToolbarItems.connect(searchItem, to: newPreview)
         sourceButton?.state = newPreview.isSourceVisible ? .on : .off
         window?.makeFirstResponder(newPreview.webView)
+        // Režim úprav pokračuje i v dalším vybraném souboru.
+        if wasEditing { newPreview.beginEditing() }
 
         window?.title = folder.lastPathComponent
         window?.subtitle = relativePath(of: url)
@@ -220,7 +246,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, ToolbarItems.follow, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.source, ToolbarItems.search]
+        [.toggleSidebar, ToolbarItems.follow, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.edit, ToolbarItems.source, ToolbarItems.search]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -247,6 +273,10 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
             return item
         case ToolbarItems.appearance:
             return AppearanceController.shared.makeToolbarItem(itemIdentifier)
+        case ToolbarItems.edit:
+            let (item, button) = ToolbarItems.editToggle(isOn: preview?.isEditing ?? false)
+            editButton = button
+            return item
         case ToolbarItems.search:
             let item = ToolbarItems.searchItem()
             searchItem = item

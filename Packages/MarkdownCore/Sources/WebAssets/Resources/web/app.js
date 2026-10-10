@@ -6,8 +6,9 @@
 // Mermaid) vkládá Swift do stejného worldu, ty větší líně podle obsahu dokumentu.
 //
 // Swift volá: mdv.update(payload), setStatus, scrollToLine, setFollowTail, setSource, find, findStep,
-//             selectionText, exportContent, flushDiagrams
-// Swift dostává: { type: "ready" | "link" | "scroll" | "sourceWidth" | "error", … } přes webkit.messageHandlers.mdv
+//             selectionText, exportContent, flushDiagrams, syncToLine, previewLine, setEditing (režim úprav)
+// Swift dostává: { type: "ready" | "link" | "scroll" | "sourceWidth" | "previewLine" | "error", … }
+//             přes webkit.messageHandlers.mdv
 
 (() => {
   "use strict";
@@ -27,6 +28,7 @@
     generation: 0,
     hasContent: false,
     followTail: true,
+    editing: false,
     remoteImages: true,
     lastChangeKey: null,
     hold: null,
@@ -450,7 +452,7 @@
 
   const sourceScroller = () => document.getElementById("mdv-source-scroll");
   const sourceContent = () => document.getElementById("mdv-source");
-  const sync = { active: "preview", map: null, lineTops: null, scheduled: false, pin: null };
+  const sync = { active: "preview", map: null, lineTops: null, scheduled: false, pin: null, editorLine: null, editorScheduled: false };
   const sourceVisible = () => document.body.classList.contains("mdv-with-source");
 
   function invalidateSyncMap() {
@@ -553,6 +555,43 @@
         sourceScroller().scrollTop = sourceYForLine(line);
       }
     });
+  }
+
+  // MARK: - Nativní editor (režim úprav)
+
+  /** Editor řídí náhled: zlomkový řádek zdroje → scrollTop náhledu (stejná mapa jako zdrojový panel). */
+  function syncToLine(line) {
+    releaseAnchor();
+    sync.active = "editor";
+    sync.editorLine = line;
+    sync.map ??= buildSyncMap();
+    scroller().scrollTop = interpolate(sync.map, line, 0, 1);
+  }
+
+  /** Zlomkový řádek zdroje na horním okraji náhledu. */
+  function previewLine() {
+    sync.map ??= buildSyncMap();
+    return interpolate(sync.map, scroller().scrollTop, 1, 0);
+  }
+
+  function setEditing(value) {
+    state.editing = !!value;
+    sync.editorLine = null;
+    if (sync.active === "editor") sync.active = "preview";
+  }
+
+  /** Uživatel posouvá náhled – editor se má posunout za ním. */
+  function reportPreviewLine() {
+    if (!state.editing || sync.active !== "preview" || sync.editorScheduled) return;
+    sync.editorScheduled = true;
+    queueMicrotask(() => {
+      sync.editorScheduled = false;
+      post({ type: "previewLine", line: previewLine() });
+    });
+  }
+
+  function resyncEditor() {
+    if (sync.active === "editor" && sync.editorLine != null) syncToLine(sync.editorLine);
   }
 
   function setSource(options) {
@@ -781,8 +820,8 @@
     const generation = ++state.generation;
     setupPurify();
     state.remoteImages = payload.remoteImages !== false;
-    // Se zdrojovým panelem, se kterým uživatel pracuje, vede zdroj; jinak kotva v náhledu.
-    const sourceLeads = sourceVisible() && sync.active === "source";
+    // Se zdrojovým panelem nebo editorem, se kterým uživatel pracuje, vede zdroj; jinak kotva v náhledu.
+    const sourceLeads = (sourceVisible() && sync.active === "source") || sync.active === "editor";
     const anchor = state.hasContent && !sourceLeads ? captureAnchor() : null;
 
     const fragment = DOMPurify.sanitize(payload.html, purifyConfig);
@@ -794,6 +833,9 @@
     if (anchor) {
       applyAnchor(anchor);
       holdAnchor(anchor);
+    } else if (sync.active === "editor") {
+      invalidateSyncMap();
+      resyncEditor();
     } else if (!state.hasContent && payload.restoreLine) {
       scrollToLine(payload.restoreLine);
     }
@@ -804,6 +846,7 @@
     if (search.query) runSearch(true);
     invalidateSyncMap();
     syncPanes();
+    resyncEditor();
     return { generation, fresh: fresh.length, total: content().children.length };
   }
 
@@ -897,12 +940,14 @@
     }
     element.addEventListener("scroll", () => {
       if (sync.active === pane) syncPanes();
+      if (pane === "preview") reportPreviewLine();
     }, { passive: true });
   }
 
   new ResizeObserver(() => {
     invalidateSyncMap();
     syncPanes();
+    resyncEditor();
   }).observe(content());
   setupDivider();
 
@@ -928,6 +973,9 @@
     finishPrint,
     jumpToLastChange,
     sourceTopLine: () => sourceLineAt(sourceScroller().scrollTop),
+    syncToLine,
+    previewLine,
+    setEditing,
   };
 
   post({ type: "ready" });

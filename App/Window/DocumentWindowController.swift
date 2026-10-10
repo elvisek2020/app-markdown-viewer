@@ -7,6 +7,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     private let outline = OutlineState()
     private let split = NSSplitViewController()
     private var sourceButton: NSButton?
+    private var editButton: NSButton?
     private var frameMemory: WindowFrameMemory?
 
     init(model: DocumentModel) {
@@ -50,6 +51,10 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         outline.onSelect = { [weak preview] item in preview?.scroll(toLine: item.line) }
         preview.onTopLineChange = { [weak outline] line in outline?.currentLine = line }
         preview.onSourceVisibilityChange = { [weak self] visible in self?.sourceButton?.state = visible ? .on : .off }
+        preview.onEditModeChange = { [weak self] editing in
+            self?.editButton?.state = editing ? .on : .off
+            self?.sourceButton?.isEnabled = !editing
+        }
         model.observeRender { [weak outline] document in outline?.items = document.outline }
         model.observeMove { [weak self] url in self?.updateSubtitle(url) }
         updateSubtitle(model.url)
@@ -76,7 +81,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.source, ToolbarItems.search]
+        [.toggleSidebar, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.edit, ToolbarItems.source, ToolbarItems.search]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -92,6 +97,10 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         case ToolbarItems.source:
             let (item, button) = ToolbarItems.sourceToggle(isOn: preview.isSourceVisible)
             sourceButton = button
+            return item
+        case ToolbarItems.edit:
+            let (item, button) = ToolbarItems.editToggle(isOn: preview.isEditing)
+            editButton = button
             return item
         case ToolbarItems.search:
             let item = ToolbarItems.searchItem()

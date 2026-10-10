@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
         SelfTest.configureApplication()
         WindowFrameSelfTest.run()
+        EditSelfTest.run()
         #endif
     }
 
@@ -75,6 +76,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationOpenUntitledFile(_ sender: NSApplication) -> Bool {
         NSDocumentController.shared.openDocument(nil)
         return true
+    }
+
+    /// Režim úprav: neuložené úpravy se před ukončením uloží, konflikt rozhodne uživatel.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        for document in NSDocumentController.shared.documents {
+            let canClose = switch document {
+            case let document as MarkdownDocument: document.prepareToClose()
+            case let document as WorkspaceDocument: document.prepareToClose()
+            default: true
+            }
+            if !canClose { return .terminateCancel }
+        }
+        return .terminateNow
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {

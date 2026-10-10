@@ -1,8 +1,8 @@
 import AppKit
 
-/// Read-only dokument. NSDocument dodává Open/Open Recent, taby, obnovu oken, otevírání
-/// z Finderu a `open -a` i proxy ikonu v titulku; obsah ale čte a hlídá `DocumentModel`
-/// s vlastním watcherem (NSDocument by při externí změně revertoval po svém).
+/// Dokument. NSDocument dodává Open/Open Recent, taby, obnovu oken, otevírání z Finderu
+/// a `open -a` i proxy ikonu v titulku; obsah ale čte, hlídá a v režimu úprav i ukládá
+/// `DocumentModel` s vlastním watcherem (NSDocument by při externí změně revertoval po svém).
 final class MarkdownDocument: NSDocument {
     private(set) var model: DocumentModel?
     private var restoredLine: Int?
@@ -38,11 +38,32 @@ final class MarkdownDocument: NSDocument {
     }
 
     override func close() {
+        // Pojistka: zavření mimo canClose (ukončení aplikace) neuložené úpravy nezahodí.
+        if let model, model.isEditing { model.save(force: true) }
         model?.stop()
         super.close()
     }
 
-    // MARK: - Viewer nic neukládá
+    /// Režim úprav: před zavřením uložit, konflikt nebo chybu zápisu nechat rozhodnout.
+    override func canClose(withDelegate delegate: Any, shouldClose shouldCloseSelector: Selector?, contextInfo: UnsafeMutableRawPointer?) {
+        Self.reply(to: delegate, selector: shouldCloseSelector, document: self, shouldClose: prepareToClose(), contextInfo: contextInfo)
+    }
+
+    /// `false` = uživatel zavření zrušil (konflikt nebo chyba ukládání v režimu úprav).
+    func prepareToClose() -> Bool {
+        let preview = windowControllers.compactMap { ($0 as? DocumentWindowController)?.preview }.first
+        return preview?.prepareToLeaveEditing(cancellable: true) ?? true
+    }
+
+    /// Odpověď ve tvaru `document:shouldClose:contextInfo:` (Objective-C konvence NSDocumentu).
+    static func reply(to delegate: Any, selector: Selector?, document: NSDocument, shouldClose: Bool, contextInfo: UnsafeMutableRawPointer?) {
+        guard let selector, let object = delegate as? NSObject, object.responds(to: selector) else { return }
+        typealias Callback = @convention(c) (NSObject, Selector, NSDocument, Bool, UnsafeMutableRawPointer?) -> Void
+        let callback = unsafeBitCast(object.method(for: selector), to: Callback.self)
+        callback(object, selector, document, shouldClose, contextInfo)
+    }
+
+    // MARK: - Ukládá DocumentModel (režim úprav), ne NSDocument
 
     override func data(ofType typeName: String) throws -> Data {
         throw CocoaError(.featureUnsupported)

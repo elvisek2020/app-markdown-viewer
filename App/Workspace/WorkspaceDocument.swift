@@ -1,7 +1,7 @@
 import AppKit
 
 /// Pracovní složka (`mdv .`, Otevřít… se složkou, přetažení složky na ikonu): strom Markdown souborů
-/// a náhled vybraného. Read-only stejně jako `MarkdownDocument`.
+/// a náhled vybraného. Vybraný soubor jde upravovat stejně jako v okně dokumentu.
 final class WorkspaceDocument: NSDocument {
     private var restoredSelection: String?
     private var restoredFollow: Bool?
@@ -18,6 +18,15 @@ final class WorkspaceDocument: NSDocument {
         let controller = WorkspaceWindowController(folder: fileURL)
         addWindowController(controller)
         controller.restore(selection: restoredSelection, follow: restoredFollow)
+    }
+
+    /// Režim úprav vybraného souboru: před zavřením uložit, konflikt nechat rozhodnout.
+    override func canClose(withDelegate delegate: Any, shouldClose shouldCloseSelector: Selector?, contextInfo: UnsafeMutableRawPointer?) {
+        MarkdownDocument.reply(to: delegate, selector: shouldCloseSelector, document: self, shouldClose: prepareToClose(), contextInfo: contextInfo)
+    }
+
+    func prepareToClose() -> Bool {
+        (windowControllers.first as? WorkspaceWindowController)?.prepareToClose() ?? true
     }
 
     override func data(ofType typeName: String) throws -> Data {

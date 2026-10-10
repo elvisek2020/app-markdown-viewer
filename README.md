@@ -5,7 +5,7 @@
 <h1 align="center">MDView</h1>
 
 <p align="center">
-  Nativní Markdown viewer pro macOS (Apple Silicon), na sledování <code>.md</code> souborů, které zapisuje AI agent nebo editor.
+  Nativní Markdown viewer pro macOS (Apple Silicon), na sledování <code>.md</code> souborů, které zapisuje AI agent nebo editor. S jednoduchým režimem úprav.
 </p>
 
 <p align="center">
@@ -24,6 +24,7 @@
 - **Pracovní složka (`mdv .`).** Strom všech `.md` souborů složky (bez `.git`, `node_modules`, buildů) se sekcí „Naposledy změněné“. Režim **Sledovat** přepne náhled na soubor, který agent právě zapsal nebo vytvořil.
 - **Zvýraznění změn.** Bloky změněné při aktualizaci souboru krátce bliknou. ⌘J skočí na poslední změnu.
 - **Zdrojový panel.** Zvýrazněný Markdown s čísly řádků vedle náhledu, se synchronizovaným scrollem oběma směry. Skok na nadpis zarovná oba panely na stejný řádek.
+- **Režim úprav.** Tlačítko s tužkou v liště (⌥⌘E) nahradí zdrojový panel jednoduchým editorem. Náhled se překresluje při psaní a změny se samy uloží sekundu po posledním psaní (nebo hned přes ⌘S). Když agent soubor změní a ty nemáš nic neuloženého, editor jeho verzi potichu načte. Když máš rozepsané úpravy, objeví se banner: načíst verzi z disku, ponechat moje úpravy, nebo obě verze porovnat. Editor vzniká až při zapnutí, start aplikace nezdržuje.
 - **Osnova, hledání a export.** Osnova dokumentu v postranním panelu zvýrazňuje aktuální sekci. Hledání ukazuje počet výsledků a volitelně ignoruje diakritiku. Export do samostatného HTML (bez skriptů, vše vložené) a do PDF, tisk vždy ve světlém tématu se stránkováním, které nerozdělí bloky.
 - **Nativní AppKit aplikace.** Taby, Otevřít nedávné, obnova oken včetně pozice, světlý i tmavý režim s přepínačem v liště, lupa pro každý dokument zvlášť a nastavení. Nové okno se otevře tam, kde bylo naposledy zavřené.
 - **Quick Look.** Mezerník ve Finderu ukáže náhled se stejným vykreslením jako aplikace. Běží v sandboxu, bez sítě a bez Mermaidu (diagram zůstane jako kód). 100KB dokument zobrazí zhruba za 0,35 s.
@@ -70,6 +71,8 @@ Verze má formát RRRRMMDD.HHMM podle času buildu (například `20261010.1712`)
 
 | Zkratka | Akce |
 |---|---|
+| ⌥⌘E | Režim úprav |
+| ⌘S | Uložit hned (v režimu úprav, jinak se ukládá samo) |
 | ⌥⌘U | Zdrojový panel |
 | ⌃⌘S | Osnova |
 | ⌘F, ⌘G / ⇧⌘G | Hledat, další a předchozí výsledek |
@@ -90,7 +93,7 @@ Verze má formát RRRRMMDD.HHMM podle času buildu (například `20261010.1712`)
 make test                # renderer, golden testy proti GitHubu, watcher (swift test)
 make build               # XcodeGen + Debug build
 scripts/ci-integration.sh  # integrační testy v aplikaci (náhled, bezpečnost, hledání, export, synchronizace,
-                           # zvýraznění změn, pracovní složka, zátěž auto-reloadu)
+                           # zvýraznění změn, pracovní složka, režim úprav, zátěž auto-reloadu)
 scripts/quicklook-check.sh # Quick Look nainstalované aplikace (registrace, vykreslení, rychlost, bez sítě)
 scripts/gh-golden.sh     # obnoví referenční výstupy GitHubu pro golden testy
 scripts/readme-images.sh # ikona a snímky do README

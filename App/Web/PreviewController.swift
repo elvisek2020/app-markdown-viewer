@@ -6,15 +6,18 @@ import WebKit
 /// Náhled ve WKWebView. JavaScript dokumentu je vypnutý (`allowsContentJavaScript = false`);
 /// app.js a knihovny běží jako user scripty v izolovaném content worldu „mdview“.
 /// Šablona se načte jednou, další rendery se do ní posílají přes `mdv.update` bez reloadu.
-/// Hledání je v `PreviewController+Find.swift`, export a tisk v `PreviewController+Export.swift`.
+/// Hledání je v `PreviewController+Find.swift`, export a tisk v `PreviewController+Export.swift`,
+/// režim úprav (editor vedle náhledu) v `PreviewController+Edit.swift`.
 final class PreviewController: NSViewController, ViewerActions, NSMenuItemValidation {
     static let world = PreviewSupport.world
 
     let model: DocumentModel
     private(set) var webView: PreviewWebView!
+    /// Banner úprav nahoře, pod ním split editor | náhled.
+    private(set) var container: PreviewContainerView!
     private var isReady = false
     private var isUpdating = false
-    private var hasContent = false
+    private(set) var hasContent = false
     private var pending: RenderedDocument?
     private var loadedLibraries: Set<WebAssets.Library> = []
     private var restoreLine: Int?
@@ -22,8 +25,18 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     /// Další render vyvolala změna nastavení nebo zdrojového panelu, ne zápis souboru – bez zvýraznění.
     private var suppressHighlightOnce = false
 
-    /// Zdrojový panel vedle náhledu (stav okna).
+    /// Zdrojový panel vedle náhledu (stav okna). V režimu úprav ho nahrazuje editor.
     private(set) var isSourceVisible = Preferences.showSourceByDefault
+    var showsSource: Bool { isSourceVisible && editor == nil }
+
+    // Režim úprav (PreviewController+Edit.swift).
+    var editor: MarkdownEditor?
+    var onEditModeChange: ((Bool) -> Void)?
+    /// Posun náhledu řídí editor (psaní, scroll v editoru); jinak náhled posouvá editor.
+    var editorLeads = false
+    var pendingSyncLine: Double?
+    var isSyncingPreview = false
+    var diffSheet: DiffSheet?
 
     /// První viditelný řádek zdroje (hlásí app.js při scrollu) – ukládá se pro obnovu okna.
     private(set) var topLine = 1
@@ -57,13 +70,29 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         webView.isInspectable = true
         #endif
         self.webView = webView
-        view = webView
+        let container = PreviewContainerView(preview: webView)
+        container.onDividerMoved = { ratio in
+            guard !Self.isSelfTest else { return }
+            UserDefaults.standard.set(ratio, forKey: Preferences.Key.editorWidth)
+        }
+        self.container = container
+        view = container
 
         model.options = Preferences.renderOptions(includeSource: isSourceVisible)
         model.observeRender { [weak self] document in self?.show(document) }
         model.observeFileState { [weak self] _ in self?.sendStatus() }
+        model.observeReload { [weak self] text in self?.editor?.replaceText(text) }
+        model.observeEditState { [weak self] in self?.updateEditBanner() }
+        // Zpět vrací po úsecích psaní mezi uloženími (NSTextView jinak slučuje veškeré psaní).
+        model.observeSave { [weak self] in self?.editor?.textView.breakUndoCoalescing() }
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.preferencesChanged() }
+        }
+        // Agent (terminál, Cursor) má po přepnutí z MDView vidět poslední úpravy hned.
+        NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                if self?.editor != nil { self?.model.save() }
+            }
         }
         loadTemplate()
     }
@@ -107,10 +136,11 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
                 "baseURL": PreviewSupport.baseURL(for: model.url),
                 "restoreLine": hasContent ? 0 : (restoreLine ?? 0),
                 "remoteImages": Preferences.remoteImages,
-                "highlightChanges": Preferences.highlightChanges && !suppressHighlightOnce,
+                // Zvýrazňují se jen změny souboru (agent), ne vlastní psaní v editoru.
+                "highlightChanges": Preferences.highlightChanges && !suppressHighlightOnce && model.renderReason == .file,
             ]
             suppressHighlightOnce = false
-            if isSourceVisible, let source = document.sourceHTML {
+            if showsSource, let source = document.sourceHTML {
                 payload["sourceHTML"] = source
             }
             do {
@@ -144,7 +174,7 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
 
     private func sendSourceState() {
         guard isReady else { return }
-        let options: [String: Any] = ["visible": isSourceVisible, "width": Preferences.sourceWidth]
+        let options: [String: Any] = ["visible": showsSource, "width": Preferences.sourceWidth]
         Task { try? await call("mdv.setSource(options)", ["options": options]) }
     }
 
@@ -165,6 +195,7 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
             hasContent = false
             if pending == nil { pending = model.rendered }
             Task { try? await call("mdv.setFollowTail(value)", ["value": Preferences.followTail]) }
+            if editor != nil { Task { try? await call("mdv.setEditing(true)") } }
             sendSourceState()
             sendStatus()
             flush()
@@ -178,6 +209,8 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
                 onTopLineChange?(line)
                 view.window?.windowController?.document?.invalidateRestorableState()
             }
+        case "previewLine":
+            if let line = body["line"] as? Double { previewDidScroll(toLine: line) }
         case "sourceWidth":
             if let width = body["value"] as? Double {
                 UserDefaults.standard.set(width, forKey: Preferences.Key.sourceWidth)
@@ -190,7 +223,7 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     }
 
     private func preferencesChanged() {
-        let options = Preferences.renderOptions(includeSource: isSourceVisible)
+        let options = Preferences.renderOptions(includeSource: showsSource)
         if options != model.options {
             suppressHighlightOnce = true
             model.options = options
@@ -209,11 +242,26 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     func setSourceVisible(_ visible: Bool) {
         guard visible != isSourceVisible else { return }
         isSourceVisible = visible
-        // Zdroj se renderuje jen se zapnutým panelem – změna voleb spustí nový render.
-        suppressHighlightOnce = true
-        model.options = Preferences.renderOptions(includeSource: visible)
-        sendSourceState()
+        applySourceState()
         onSourceVisibilityChange?(visible)
+    }
+
+    /// Zdroj se renderuje jen se zobrazeným panelem – změna voleb spustí nový render.
+    func applySourceState() {
+        let options = Preferences.renderOptions(includeSource: showsSource)
+        if options != model.options {
+            suppressHighlightOnce = true
+            model.options = options
+        }
+        sendSourceState()
+    }
+
+    static var isSelfTest: Bool {
+        #if DEBUG
+        SelfTest.isActive
+        #else
+        false
+        #endif
     }
 
     // MARK: - ViewerActions
@@ -261,6 +309,11 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
             menuItem.state = Preferences.followTail ? .on : .off
         case #selector(toggleSourcePane(_:)):
             menuItem.state = isSourceVisible ? .on : .off
+            return editor == nil
+        case #selector(toggleEditMode(_:)):
+            menuItem.state = editor != nil ? .on : .off
+        case #selector(saveDocument(_:)):
+            return editor != nil
         default:
             break
         }

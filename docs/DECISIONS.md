@@ -34,6 +34,7 @@ Záznam architektonických rozhodnutí a výsledků spiků. Plné zdůvodnění 
 | D29 | Lupa per dokument v UserDefaults (nejvýš 200 záznamů, neexistující soubory jdou pryč první) | implementováno |
 | D30 | Paměť okna vlastní (`WindowFrameMemory`: uložení při zavření, posunu a změně velikosti, obnova u nového okna) místo `windowFrameAutosaveName`, které patří jen jednomu oknu | implementováno |
 | D31 | Přepínač vzhledu v nástrojové liště (`NSMenuToolbarItem`) a v menu Zobrazení, sdílí předvolbu s Nastavením | implementováno |
+| D32 | Režim úprav (mění D1 a zadání „jen viewer“): nativní `NSTextView` (TextKit 1) vytvořený až při zapnutí, automatické atomické ukládání, konflikt se zápisem agenta řeší banner | implementováno |
 | D11 | Build výstupy mimo repo (`~/Library/Caches/MDView`), protože `~/Documents` synchronizuje iCloud a xattr rozbíjejí codesign | přijato |
 
 ## Spiky
@@ -101,3 +102,26 @@ Integrační testy ověřují:
 Poznatky:
 - **`/private` v cestách:** `URL.resolvingSymlinksInPath()` i `standardizedFileURL` odstraňují prefix `/private`, FSEvents ho ale hlásí. Index a watcher proto porovnávají s kanonickou cestou kořene (`F_GETPATH`) a pracovní složka sjednocuje cesty přes `resolvingSymlinksInPath()`.
 - **Quick Look v CI:** na virtuálním runneru bez GPU trvá náhled 2–3 s. CI ověřuje funkčnost, rychlost se měří lokálně.
+
+## Režim úprav (D32)
+
+Zadání: co nejjednodušší editor, který nezpomalí start aplikace. Do režimu úprav se přepíná tlačítkem v liště (⌥⌘E), ukládá se automaticky a změnu od agenta při neuložených úpravách rozhodne uživatel v banneru.
+
+- **Editor:** `NSTextView` s TextKit 1 (`init(usingTextLayoutManager: false)`), neproporcionální písmo, bez automatických náhrad a kontroly pravopisu. TextKit 1 kvůli přesným pozicím řádků pro synchronizaci posunu (TextKit 2 výšky odhaduje, viz zdrojový panel). Vzniká až při zapnutí režimu, start aplikace se nemění. Bez nových závislostí, bez zvýraznění syntaxe.
+- **Rozložení:** editor nahrazuje zdrojový panel. `PreviewContainerView` drží banner a `NSSplitView` editor | náhled. Podíl šířky se pamatuje v předvolbě `editorWidth`.
+- **Náhled:** renderuje text editoru (debounce 60 ms). Zvýraznění změn jen u změn souboru, ne u psaní (`DocumentModel.RenderReason`).
+- **Ukládání:** sekundu po posledním psaní, při přepnutí do jiné aplikace (agent hned vidí úpravy), ⌘S, vypnutí režimu, přepnutí souboru v pracovní složce a zavření okna. Zápis je atomický (`Data.write(.atomic)`, práva souboru zůstanou) do cíle symlinku. Před zápisem se soubor znovu přečte: když ho agent mezitím změnil a watcher to ještě neohlásil, vznikne konflikt místo přepsání.
+- **Stav disk ↔ editor** drží `EditSync` (FileWatch, testy v `EditSyncTests`):
+  - Vlastní zápisy se poznají podle obsahu. Watcher je hlásí se zpožděním, proto se pamatují i poslední 4 uložené verze.
+  - Změna od agenta bez neuložených úprav se do editoru tiše načte. Mění se jen změněný úsek, kurzor i pozice zůstanou, historie zpět se zahodí.
+  - S neuloženými úpravami vznikne konflikt. Automatické ukládání stojí a banner nabídne Načíst verzi z disku, Ponechat moje úpravy, nebo Porovnat (řádkový diff `LineDiff` v okně nad dokumentem).
+- **Zavření a ukončení:** `canClose` a `applicationShouldTerminate` uloží rozepsané úpravy. Při konfliktu nebo chybě zápisu se modálně zeptají a dovolí zavření zrušit.
+- **Pracovní složka:** režim úprav pokračuje i ve vybraném dalším souboru. Režim sledování v něm nepřepíná, aby editor uživateli nezmizel pod rukama.
+- **Synchronizace posunu:** editor řídí náhled přes zlomkový řádek zdroje a stejnou monotónní mapu jako zdrojový panel (`mdv.syncToLine`). Posun náhledu uživatelem posune editor (`previewLine`).
+- **Menu:** menu vieweru mělo v Úpravách jen Kopírovat a Vybrat vše. Doplněné jsou Zpět, Znovu, Vyjmout, Vložit, Smazat a v Souboru Uložit, protože NSTextView dostává ⌘Z, ⌘X, ⌘V a ⌘S jen přes položky menu. Zpět vrací po úsecích psaní mezi uloženími (po uložení `breakUndoCoalescing`).
+
+Poznatky:
+- **Tisk na vlákně na pozadí:** export PDF volá `visibleRect` u všech předků webview, tedy i u `PreviewContainerView.isFlipped`. Izolovaný getter by Swift 6 za běhu shodil, proto je `nonisolated`.
+- **`saveDocument:`:** Swiftí `NSDocument.save(_:)` je v Objective-C `saveDocument:`. Akce náhledu se proto musí jmenovat `saveDocument(_:)`, jinak ji položka Uložit mine.
+- **Skupiny Zpět v self-testu:** NSUndoManager zavírá automatickou skupinu až po zpracování události. Self-test žádné události nemá, takže po každém psaní pošle prázdnou `applicationDefined` událost. Ruční `endUndoGrouping` vyhodí výjimku.
+- **Ověření:** `scripts/selftest-edit.sh` (v CI) projde psaní, automatické uložení bez reloadu, tiché načtení změny od agenta, oba konflikty, porovnání, ⌘S, položky menu, Zpět a synchronizaci posunu.

@@ -105,6 +105,10 @@ View-based `QLPreviewingController` s WKWebView, sdílené MarkdownCore + WebAss
 ### F5 – nice-to-have
 Folder workspace (`mdv .` přes `WorkspaceDocument` pro `public.folder`, strom souborů, volitelně auto-otevření naposledy změněného .md), zvýraznění změněných bloků + „skoč na poslední změnu“, `:emoji:`, `mdv` na neexistující soubor („čekám na vytvoření“), `mdv -` ze stdin.
 
+### F6 – režim úprav (dodatek k zadání „jen viewer“)
+Naprosto jednoduchý editor bez dopadu na start aplikace: tlačítko v liště (⌥⌘E) přepne zdrojový panel na nativní `NSTextView`, ukládá se automaticky, změna od agenta bez neuložených úprav se tiše načte, s neuloženými úpravami banner (načíst z disku / ponechat moje / porovnat). Podrobnosti v DECISIONS (D32).
+**Akceptace:** `scripts/selftest-edit.sh` – psaní hned v náhledu, uložení po chvíli bez reloadu editoru, tiché načtení zápisu agenta se zachovaným kurzorem, konflikt soubor nepřepíše, obě volby a porovnání fungují, synchronizace posunu ±1 řádek.
+
 ## CI (GitHub Actions)
 
 `macos-26` (arm64, Xcode 26.6): `brew install xcodegen`, `swift test` v `Packages/MarkdownCore`, `xcodebuild build CODE_SIGNING_ALLOWED=NO`. Soukromé repo počítá macOS minuty 10× (Free plán ≈ 200 macOS minut/měsíc) → path filtry, `concurrency: cancel-in-progress`, spouštění jen na push do `main` a ručně.

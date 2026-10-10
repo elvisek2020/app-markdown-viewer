@@ -4,6 +4,7 @@
 #      poslední platná verze rozbitého diagramu)
 #   2. Samples/security.md nic nespustí
 #   3. zátěž auto-reloadu (všechny scénáře agent-sim.sh)
+#   4. pracovní složka, paměť okna, režim úprav (ukládání, konflikt se zápisem agenta)
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -20,6 +21,8 @@ echo "== Pracovní složka"
 "$ROOT/scripts/selftest-workspace.sh" > "$WORK/workspace.json"
 echo "== Paměť okna"
 "$ROOT/scripts/selftest-window.sh" > "$WORK/window.json"
+echo "== Režim úprav"
+"$ROOT/scripts/selftest-edit.sh" > "$WORK/edit.json"
 
 python3 - "$WORK" "$LIMIT_MS" <<'PY'
 import json, re, sys
@@ -72,6 +75,23 @@ check("pracovní složka: sledování přepne na nový soubor agenta",
 win = json.load(open(f"{work}/window.json"))
 check("paměť okna: nové okno dostane rám naposledy zavřeného, další dokument jako panel",
       win.get("reopened") == win.get("target") and win.get("thirdTabbedWithSecond") is True, win)
+
+e = json.load(open(f"{work}/edit.json"))
+check("úpravy: editor místo zdrojového panelu, fokus v editoru",
+      e.get("editing") and e.get("editorFocused") and e.get("sourcePaneHidden"), e)
+check("úpravy: psaní hned v náhledu, uložení až po chvíli, vlastní zápis bez reloadu",
+      e.get("previewLive") and e.get("notSavedImmediately") and e.get("autosaved") and e.get("ownWriteIgnored"), e)
+check("úpravy: ⌘S a ⌥⌘E vede editor do náhledu, ⌘S uloží hned, menu se zpět a schránkou",
+      e.get("commandsRouteToPreview") and e.get("saveCommand") and e.get("editMenu") and e.get("undo"), e)
+check("úpravy: zápis agenta bez neuložených úprav se tiše načte, kurzor zůstane",
+      e.get("silentReload") and e.get("silentReloadNoBanner") and e.get("caretKept") and e.get("reloadPreview"), e)
+check("úpravy: konflikt s agentem – banner, soubor se nepřepíše, porovnání",
+      e.get("conflict") and e.get("conflictBanner") and e.get("conflictNoOverwrite") and e.get("conflictPreviewShowsMine") and e.get("diffSheet"), e)
+check("úpravy: konflikt – ponechat moje / načíst z disku",
+      e.get("keptMine") and e.get("conflict2") and e.get("tookDisk") and e.get("tookDiskPreview"), e)
+check("úpravy: synchronizace posunu editor ↔ náhled",
+      abs(e.get("syncPreviewLine", 0) - e.get("syncEditorLine", -9)) <= 1 and abs(e.get("syncBackEditorLine", 0) - 150) <= 1, e)
+check("úpravy: vypnutí režimu uloží rozepsané", e.get("finished") and e.get("savedOnFinish"), e)
 
 s = json.load(open(f"{work}/security.json"))["phase1"]
 check("security.md: žádné skripty, iframy, formuláře",

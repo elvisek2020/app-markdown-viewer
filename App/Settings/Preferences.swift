@@ -14,6 +14,7 @@ enum Preferences {
         static let ignoreDiacritics = "findIgnoreDiacritics"
         static let showSource = "showSourceByDefault"
         static let sourceWidth = "sourceWidth"
+        static let editorWidth = "editorWidth"
         static let highlightChanges = "highlightChanges"
         static let zoomByFile = "pageZoomByFile"
     }
@@ -34,6 +35,7 @@ enum Preferences {
             Key.ignoreDiacritics: true,
             Key.showSource: false,
             Key.sourceWidth: 0.45,
+            Key.editorWidth: 0.5,
             Key.highlightChanges: true,
         ])
     }
@@ -55,6 +57,7 @@ enum Preferences {
     static var ignoreDiacritics: Bool { defaults.bool(forKey: Key.ignoreDiacritics) }
     static var showSourceByDefault: Bool { defaults.bool(forKey: Key.showSource) }
     static var sourceWidth: Double { defaults.double(forKey: Key.sourceWidth) }
+    static var editorWidth: Double { defaults.double(forKey: Key.editorWidth) }
     static var highlightChanges: Bool { defaults.bool(forKey: Key.highlightChanges) }
 
     /// Lupa je per dokument (podle cesty); dokument bez záznamu má 100 %.
