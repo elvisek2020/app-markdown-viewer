@@ -5,6 +5,16 @@ enum ToolbarItems {
     static let source = NSToolbarItem.Identifier("cz.elvisek.mdview.source")
     static let search = NSToolbarItem.Identifier("cz.elvisek.mdview.search")
     static let follow = NSToolbarItem.Identifier("cz.elvisek.mdview.follow")
+    static let appearance = NSToolbarItem.Identifier("cz.elvisek.mdview.appearance")
+
+    /// Název pro uložení rámu okna (`NSWindow Frame <název>`); self-test ukládá pod vlastním klíčem,
+    /// nebo vůbec – Debug build sdílí předvolby s nainstalovanou aplikací.
+    static func frameName(_ name: String) -> String? {
+        #if DEBUG
+        if SelfTest.isActive { return WindowFrameSelfTest.isActive ? "MDViewSelfTest\(name)" : nil }
+        #endif
+        return "MDView\(name)"
+    }
 
     /// Přepínací tlačítko s SF Symbolem; akce jde do responder chainu.
     static func toggle(

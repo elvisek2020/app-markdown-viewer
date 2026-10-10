@@ -58,6 +58,7 @@ enum SelfTest {
     /// aplikací, takže self-test nesmí ukládat rámy oken a rozdělení do jejích předvoleb.
     static var isActive: Bool {
         reportPath != nil || statusPath != nil || snapshotPath != nil || WorkspaceSelfTest.reportPath != nil
+            || WindowFrameSelfTest.isActive
     }
 
     static var snapshotPath: String? {

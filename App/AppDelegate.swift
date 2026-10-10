@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         #if DEBUG
         SelfTest.configureApplication()
+        WindowFrameSelfTest.run()
         #endif
     }
 

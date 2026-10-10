@@ -18,6 +18,8 @@ echo "== Zátěž auto-reloadu"
 "$ROOT/scripts/selftest-sim.sh" | tee "$WORK/sim.txt"
 echo "== Pracovní složka"
 "$ROOT/scripts/selftest-workspace.sh" > "$WORK/workspace.json"
+echo "== Paměť okna"
+"$ROOT/scripts/selftest-window.sh" > "$WORK/window.json"
 
 python3 - "$WORK" "$LIMIT_MS" <<'PY'
 import json, re, sys
@@ -66,6 +68,10 @@ w = json.load(open(f"{work}/workspace.json"))
 check("pracovní složka: strom bez node_modules/.git, výchozí README", w.get("fileCount") == 2 and w.get("initial") == "README.md", w)
 check("pracovní složka: sledování přepne na nový soubor agenta",
       w.get("followed") == "agent/vystup.md" and w.get("followedTitle") == "Výstup agenta", w)
+
+win = json.load(open(f"{work}/window.json"))
+check("paměť okna: nové okno dostane rám naposledy zavřeného, další dokument jako panel",
+      win.get("reopened") == win.get("target") and win.get("thirdTabbedWithSecond") is True, win)
 
 s = json.load(open(f"{work}/security.json"))["phase1"]
 check("security.md: žádné skripty, iframy, formuláře",

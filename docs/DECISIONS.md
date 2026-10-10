@@ -32,6 +32,8 @@ Záznam architektonických rozhodnutí a výsledků spiků. Plné zdůvodnění 
 | D27 | Zvýraznění změn z reconciliation (nové klíče bloků), potlačené po renderu vyvolaném nastavením; ⌘J skok na poslední změnu | implementováno |
 | D28 | `mdv` na neexistující soubor čeká v CLI (bez URL schématu, které by mohly volat cizí aplikace) | implementováno |
 | D29 | Lupa per dokument v UserDefaults (nejvýš 200 záznamů, neexistující soubory jdou pryč první) | implementováno |
+| D30 | Paměť okna vlastní (`WindowFrameMemory`: uložení při zavření, posunu a změně velikosti, obnova u nového okna) místo `windowFrameAutosaveName`, které patří jen jednomu oknu | implementováno |
+| D31 | Přepínač vzhledu v nástrojové liště (`NSMenuToolbarItem`) a v menu Zobrazení, sdílí předvolbu s Nastavením | implementováno |
 | D11 | Build výstupy mimo repo (`~/Library/Caches/MDView`), protože `~/Documents` synchronizuje iCloud a xattr rozbíjejí codesign | přijato |
 
 ## Spiky

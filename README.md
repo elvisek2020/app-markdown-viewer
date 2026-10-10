@@ -25,7 +25,7 @@
 - **Zvýraznění změn.** Bloky změněné při aktualizaci souboru krátce bliknou. ⌘J skočí na poslední změnu.
 - **Zdrojový panel.** Zvýrazněný Markdown s čísly řádků vedle náhledu, se synchronizovaným scrollem oběma směry. Skok na nadpis zarovná oba panely na stejný řádek.
 - **Osnova, hledání a export.** Osnova dokumentu v postranním panelu zvýrazňuje aktuální sekci. Hledání ukazuje počet výsledků a volitelně ignoruje diakritiku. Export do samostatného HTML (bez skriptů, vše vložené) a do PDF, tisk vždy ve světlém tématu se stránkováním, které nerozdělí bloky.
-- **Nativní AppKit aplikace.** Taby, Otevřít nedávné, obnova oken včetně pozice, světlý i tmavý režim, lupa pro každý dokument zvlášť a nastavení.
+- **Nativní AppKit aplikace.** Taby, Otevřít nedávné, obnova oken včetně pozice, světlý i tmavý režim s přepínačem v liště, lupa pro každý dokument zvlášť a nastavení. Nové okno se otevře tam, kde bylo naposledy zavřené.
 - **Quick Look.** Mezerník ve Finderu ukáže náhled se stejným vykreslením jako aplikace. Běží v sandboxu, bez sítě a bez Mermaidu (diagram zůstane jako kód). 100KB dokument zobrazí zhruba za 0,35 s.
 - **CLI `mdv`** pro otevírání souborů z terminálu.
 

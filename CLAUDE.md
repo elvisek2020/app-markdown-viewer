@@ -18,6 +18,7 @@ scripts/gh-golden.sh [fixture]          # referenční výstupy GitHub API pro g
 scripts/readme-images.sh                # ikona + snímky náhledu do README (docs/images)
 scripts/quicklook-check.sh              # Quick Look nainstalované aplikace (po make install)
 scripts/selftest-workspace.sh           # pracovní složka: strom, výchozí výběr, režim sledování
+scripts/selftest-window.sh              # paměť pozice a velikosti okna
 make ql-status                          # registrace Quick Look rozšíření
 ```
 

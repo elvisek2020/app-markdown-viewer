@@ -7,6 +7,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     private let outline = OutlineState()
     private let split = NSSplitViewController()
     private var sourceButton: NSButton?
+    private var frameMemory: WindowFrameMemory?
 
     init(model: DocumentModel) {
         preview = PreviewController(model: model)
@@ -41,8 +42,10 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         toolbar.allowsUserCustomization = false
         window.toolbar = toolbar
 
-        shouldCascadeWindows = true
-        if !Self.isSelfTest { windowFrameAutosaveName = "MDViewDocument" }
+        shouldCascadeWindows = false
+        if let name = ToolbarItems.frameName("Document") {
+            frameMemory = WindowFrameMemory(window: window, name: name)
+        }
 
         outline.onSelect = { [weak preview] item in preview?.scroll(toLine: item.line) }
         preview.onTopLineChange = { [weak outline] line in outline?.currentLine = line }
@@ -73,7 +76,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .flexibleSpace, ToolbarItems.source, ToolbarItems.search]
+        [.toggleSidebar, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.source, ToolbarItems.search]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -94,6 +97,8 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
             let item = ToolbarItems.searchItem()
             ToolbarItems.connect(item, to: preview)
             return item
+        case ToolbarItems.appearance:
+            return AppearanceController.shared.makeToolbarItem(itemIdentifier)
         default:
             return nil
         }

@@ -64,6 +64,10 @@ enum MainMenuExtras {
             for (offset, menuItem) in items.enumerated() {
                 view.insertItem(menuItem, at: offset)
             }
+            let appearance = NSMenuItem(title: "Vzhled", action: nil, keyEquivalent: "")
+            appearance.submenu = AppearanceController.shared.makeMenu()
+            view.insertItem(appearance, at: items.count)
+            view.insertItem(.separator(), at: items.count + 1)
         }
 
         // Úpravy → Hledat: standardní performFindPanelAction: by zachytil WKWebView; vlastní akce

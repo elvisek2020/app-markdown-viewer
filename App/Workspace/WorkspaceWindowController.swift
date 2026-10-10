@@ -16,6 +16,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
     private var searchItem: NSSearchToolbarItem?
     private var sourceButton: NSButton?
     private var followButton: NSButton?
+    private var frameMemory: WindowFrameMemory?
     private var scanGeneration = 0
     private var hasInitialSelection = false
     private var pendingSelection: String?
@@ -56,8 +57,10 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
         toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = false
         window.toolbar = toolbar
-        shouldCascadeWindows = true
-        if !Self.isSelfTest { windowFrameAutosaveName = "MDViewWorkspace" }
+        shouldCascadeWindows = false
+        if let name = ToolbarItems.frameName("Workspace") {
+            frameMemory = WindowFrameMemory(window: window, name: name)
+        }
 
         state.onSelect = { [weak self] path in self?.select(path: path) }
         rescan()
@@ -217,7 +220,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, ToolbarItems.follow, .flexibleSpace, ToolbarItems.source, ToolbarItems.search]
+        [.toggleSidebar, ToolbarItems.follow, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.source, ToolbarItems.search]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -242,6 +245,8 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
             let (item, button) = ToolbarItems.sourceToggle(isOn: preview?.isSourceVisible ?? false)
             sourceButton = button
             return item
+        case ToolbarItems.appearance:
+            return AppearanceController.shared.makeToolbarItem(itemIdentifier)
         case ToolbarItems.search:
             let item = ToolbarItems.searchItem()
             searchItem = item

@@ -1,7 +1,7 @@
 ---
 title: MDView – ukázkový dokument
 tags: [gfm, mermaid, katex]
-author: elvisek
+author: ElvisEK
 ---
 
 # MDView – ukázka všech prvků
