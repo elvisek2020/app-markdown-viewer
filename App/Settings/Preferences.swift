@@ -17,6 +17,8 @@ enum Preferences {
         static let editorWidth = "editorWidth"
         static let highlightChanges = "highlightChanges"
         static let zoomByFile = "pageZoomByFile"
+        static let reopenDocuments = "reopenLastDocuments"
+        static let lastDocuments = "lastOpenDocuments"
     }
 
     enum Appearance: String, CaseIterable {
@@ -37,6 +39,7 @@ enum Preferences {
             Key.sourceWidth: 0.45,
             Key.editorWidth: 0.5,
             Key.highlightChanges: true,
+            Key.reopenDocuments: true,
         ])
     }
 
@@ -59,6 +62,7 @@ enum Preferences {
     static var sourceWidth: Double { defaults.double(forKey: Key.sourceWidth) }
     static var editorWidth: Double { defaults.double(forKey: Key.editorWidth) }
     static var highlightChanges: Bool { defaults.bool(forKey: Key.highlightChanges) }
+    static var reopenLastDocuments: Bool { defaults.bool(forKey: Key.reopenDocuments) }
 
     /// Lupa je per dokument (podle cesty); dokument bez záznamu má 100 %.
     static func zoom(for url: URL) -> Double {

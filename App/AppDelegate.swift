@@ -5,10 +5,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
         // První vytvořená instance se stane NSDocumentController.shared (Otevřít… pak umí i složky).
         _ = ViewerDocumentController()
+        // Výchozí hodnoty už před otevřením prvních dokumentů (znovuotevření, zdrojový panel).
+        Preferences.registerDefaults()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        Preferences.registerDefaults()
         Preferences.applyAppearance()
         MainMenuExtras.install()
         // Vzhled se mění jen se změnou samotné předvolby – UserDefaults hlásí i automatické
@@ -21,10 +22,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 Preferences.applyAppearance()
             }
         }
+        DocumentReopener.reopen()
         #if DEBUG
         SelfTest.configureApplication()
         WindowFrameSelfTest.run()
         EditSelfTest.run()
+        ReopenSelfTest.run()
         #endif
     }
 
@@ -74,6 +77,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Viewer nemá prázdný dokument – místo něj (spuštění bez souboru, klik na Dock) ukáže Open panel.
     func applicationOpenUntitledFile(_ sender: NSApplication) -> Bool {
+        // Start bez souborů: AppKit sem přijde ještě před applicationDidFinishLaunching.
+        if DocumentReopener.reopen() { return true }
         NSDocumentController.shared.openDocument(nil)
         return true
     }
@@ -88,6 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             if !canClose { return .terminateCancel }
         }
+        DocumentReopener.save()
         return .terminateNow
     }
 

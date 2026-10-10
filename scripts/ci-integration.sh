@@ -23,6 +23,8 @@ echo "== Paměť okna"
 "$ROOT/scripts/selftest-window.sh" > "$WORK/window.json"
 echo "== Režim úprav"
 "$ROOT/scripts/selftest-edit.sh" > "$WORK/edit.json"
+echo "== Znovuotevření"
+"$ROOT/scripts/selftest-reopen.sh" > "$WORK/reopen.json"
 
 python3 - "$WORK" "$LIMIT_MS" <<'PY'
 import json, re, sys
@@ -97,6 +99,10 @@ check("úpravy: vypnutí režimu uloží rozepsané", e.get("finished") and e.ge
 check("úpravy: přepínač Zdroj | Upravit (rovnou mezi režimy, vypnutí), zabarvená lišta",
       e.get("switchShowsEdit") and e.get("editTint") and e.get("clickEdit") and e.get("clickSourceWhileEditing")
       and e.get("clickEditWhileSource") and e.get("clickEditOff"), e)
+
+ro = json.load(open(f"{work}/reopen.json"))
+check("znovuotevření: soubor i pracovní složka po dalším spuštění, bez panelu Otevřít",
+      ro.get("reopened") == ["poznamky.md", "slozka"] and ro.get("openPanelShown") is False, ro)
 
 s = json.load(open(f"{work}/security.json"))["phase1"]
 check("security.md: žádné skripty, iframy, formuláře",
