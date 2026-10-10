@@ -51,7 +51,8 @@ check("export HTML: bez skriptů, vložené fonty a obrázky",
       isinstance(html, dict) and html.get("scripts") == 0 and html.get("svg") and html.get("katexFonts")
       and html.get("inlinedImage") and html.get("mdvURLs") == 0 and not html.get("sourcepos"), html)
 pdf = f3.get("pdf", {})
-check("export PDF: stránkovaný a s poslední stranou", isinstance(pdf, dict) and pdf.get("pages", 0) >= 2 and pdf.get("lastPageHasEnd"), pdf)
+check("export PDF: stránkovaný, celý obsah až po poslední stranu",
+      isinstance(pdf, dict) and pdf.get("pages", 0) >= 2 and pdf.get("lastPageHasFinalText") and pdf.get("hasEnd"), pdf)
 sync = f3.get("sync", {})
 check("skok na nadpis zarovná zdroj na stejný řádek", f3.get("sourceReady") and abs(sync.get("sourceTop", 0) - sync.get("alerts", -9)) <= 0.5, sync)
 check("synchronizace zdroj → náhled", sync.get("previewAfterSource") == sync.get("table"), sync)

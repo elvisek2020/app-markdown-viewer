@@ -182,7 +182,9 @@ enum SelfTest {
             let pages = pdf?.pageCount ?? 0
             result["pdf"] = [
                 "pages": pages,
-                "lastPageHasEnd": pdf?.page(at: max(0, pages - 1))?.string?.contains("Konec dokumentu") ?? false,
+                // Poslední text showcase.md je druhá poznámka pod čarou (footnotes jsou na konci).
+                "lastPageHasFinalText": pdf?.page(at: max(0, pages - 1))?.string?.contains("Druhá poznámka") ?? false,
+                "hasEnd": pdf?.string?.contains("Konec dokumentu") ?? false,
                 "hasMermaidText": pdf?.string?.contains("FSEvents") ?? false,
             ]
         } catch {
