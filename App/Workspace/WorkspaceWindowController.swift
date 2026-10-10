@@ -14,8 +14,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
     private(set) var preview: PreviewController?
     private var model: DocumentModel?
     private var searchItem: NSSearchToolbarItem?
-    private var sourceButton: NSButton?
-    private var editButton: NSButton?
+    private var paneSwitch: PaneModeSwitch!
     private var followButton: NSButton?
     private var frameMemory: WindowFrameMemory?
     private var scanGeneration = 0
@@ -53,6 +52,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
         window.contentViewController = split
         window.setContentSize(NSSize(width: 1200, height: 1000))
 
+        paneSwitch = PaneModeSwitch(window: window)
         let toolbar = NSToolbar(identifier: "MDViewWorkspaceToolbar")
         toolbar.delegate = self
         toolbar.displayMode = .iconOnly
@@ -170,6 +170,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), !isDirectory.boolValue else { return }
         guard path != state.selectedPath || preview == nil else { return }
         let wasEditing = preview?.isEditing ?? false
+        let previousMode = preview?.paneMode
         if let old = preview, wasEditing, !old.prepareToLeaveEditing(cancellable: true) {
             // Zrušeno – vrátit výběr ve stromu na upravovaný soubor.
             let current = state.selectedPath
@@ -189,13 +190,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
         state.selectedPath = path
 
         let newPreview = PreviewController(model: newModel)
-        newPreview.onSourceVisibilityChange = { [weak self] visible in self?.sourceButton?.state = visible ? .on : .off }
-        newPreview.onEditModeChange = { [weak self] editing in
-            self?.editButton?.state = editing ? .on : .off
-            self?.sourceButton?.isEnabled = !editing
-        }
         if let old = preview {
-            if old.isSourceVisible { newPreview.setSourceVisible(true) }
             old.view.removeFromSuperview()
             old.removeFromParent()
         }
@@ -205,10 +200,10 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
         content.view.addSubview(newPreview.view)
         preview = newPreview
         ToolbarItems.connect(searchItem, to: newPreview)
-        sourceButton?.state = newPreview.isSourceVisible ? .on : .off
         window?.makeFirstResponder(newPreview.webView)
-        // Režim úprav pokračuje i v dalším vybraném souboru.
-        if wasEditing { newPreview.beginEditing() }
+        // Zdroj i režim úprav pokračují i v dalším vybraném souboru.
+        if let previousMode { newPreview.setPaneMode(previousMode) }
+        paneSwitch.attach(newPreview)
 
         window?.title = folder.lastPathComponent
         window?.subtitle = relativePath(of: url)
@@ -246,7 +241,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, ToolbarItems.follow, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.edit, ToolbarItems.source, ToolbarItems.search]
+        [.toggleSidebar, ToolbarItems.follow, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.mode, ToolbarItems.search]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -267,16 +262,10 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
             )
             followButton = button
             return item
-        case ToolbarItems.source:
-            let (item, button) = ToolbarItems.sourceToggle(isOn: preview?.isSourceVisible ?? false)
-            sourceButton = button
-            return item
+        case ToolbarItems.mode:
+            return paneSwitch.item
         case ToolbarItems.appearance:
             return AppearanceController.shared.makeToolbarItem(itemIdentifier)
-        case ToolbarItems.edit:
-            let (item, button) = ToolbarItems.editToggle(isOn: preview?.isEditing ?? false)
-            editButton = button
-            return item
         case ToolbarItems.search:
             let item = ToolbarItems.searchItem()
             searchItem = item

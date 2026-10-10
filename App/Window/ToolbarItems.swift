@@ -2,11 +2,11 @@ import AppKit
 
 /// Položky nástrojové lišty společné pro okno dokumentu i pracovní složky.
 enum ToolbarItems {
-    static let source = NSToolbarItem.Identifier("cz.elvisek.mdview.source")
+    /// Přepínač Zdroj | Upravit (`PaneModeSwitch`).
+    static let mode = NSToolbarItem.Identifier("cz.elvisek.mdview.mode")
     static let search = NSToolbarItem.Identifier("cz.elvisek.mdview.search")
     static let follow = NSToolbarItem.Identifier("cz.elvisek.mdview.follow")
     static let appearance = NSToolbarItem.Identifier("cz.elvisek.mdview.appearance")
-    static let edit = NSToolbarItem.Identifier("cz.elvisek.mdview.edit")
 
     /// Název pro uložení rámu okna (`NSWindow Frame <název>`); self-test ukládá pod vlastním klíčem,
     /// nebo vůbec – Debug build sdílí předvolby s nainstalovanou aplikací.
@@ -36,16 +36,6 @@ enum ToolbarItems {
         item.label = label
         item.toolTip = toolTip
         return (item, button)
-    }
-
-    static func sourceToggle(isOn: Bool) -> (NSToolbarItem, NSButton) {
-        toggle(source, symbol: "chevron.left.forwardslash.chevron.right", label: "Zdroj",
-               toolTip: "Zobrazit zdroj vedle náhledu (⌥⌘U)", action: #selector(ViewerActions.toggleSourcePane(_:)), isOn: isOn)
-    }
-
-    static func editToggle(isOn: Bool) -> (NSToolbarItem, NSButton) {
-        toggle(edit, symbol: "pencil", label: "Upravit",
-               toolTip: "Režim úprav – změny se ukládají automaticky (⌥⌘E)", action: #selector(ViewerActions.toggleEditMode(_:)), isOn: isOn)
     }
 
     static func searchItem() -> NSSearchToolbarItem {

@@ -29,9 +29,16 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     private(set) var isSourceVisible = Preferences.showSourceByDefault
     var showsSource: Bool { isSourceVisible && editor == nil }
 
+    /// Co je vedle náhledu: nic, zdroj, nebo editor (přepínač v liště, `setPaneMode`).
+    enum PaneMode {
+        case preview, source, edit
+    }
+
+    var paneMode: PaneMode { editor != nil ? .edit : (isSourceVisible ? .source : .preview) }
+    var onPaneModeChange: ((PaneMode) -> Void)?
+
     // Režim úprav (PreviewController+Edit.swift).
     var editor: MarkdownEditor?
-    var onEditModeChange: ((Bool) -> Void)?
     /// Posun náhledu řídí editor (psaní, scroll v editoru); jinak náhled posouvá editor.
     var editorLeads = false
     var pendingSyncLine: Double?
@@ -41,9 +48,8 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     /// První viditelný řádek zdroje (hlásí app.js při scrollu) – ukládá se pro obnovu okna.
     private(set) var topLine = 1
 
-    /// Volá se při změně `topLine` (zvýraznění v osnově) a viditelnosti zdroje (tlačítko v liště).
+    /// Volá se při změně `topLine` (zvýraznění v osnově).
     var onTopLineChange: ((Int) -> Void)?
-    var onSourceVisibilityChange: ((Bool) -> Void)?
 
     /// Vyhledávací pole v nástrojové liště okna (nastavuje DocumentWindowController).
     weak var searchField: NSSearchField?
@@ -243,7 +249,7 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         guard visible != isSourceVisible else { return }
         isSourceVisible = visible
         applySourceState()
-        onSourceVisibilityChange?(visible)
+        onPaneModeChange?(paneMode)
     }
 
     /// Zdroj se renderuje jen se zobrazeným panelem – změna voleb spustí nový render.
@@ -277,7 +283,7 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     }
 
     @objc func toggleSourcePane(_ sender: Any?) {
-        setSourceVisible(!isSourceVisible)
+        setPaneMode(paneMode == .source ? .preview : .source)
     }
 
     @objc func toggleFollowTail(_ sender: Any?) {
@@ -308,8 +314,7 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         case #selector(toggleFollowTail(_:)):
             menuItem.state = Preferences.followTail ? .on : .off
         case #selector(toggleSourcePane(_:)):
-            menuItem.state = isSourceVisible ? .on : .off
-            return editor == nil
+            menuItem.state = paneMode == .source ? .on : .off
         case #selector(toggleEditMode(_:)):
             menuItem.state = editor != nil ? .on : .off
         case #selector(saveDocument(_:)):

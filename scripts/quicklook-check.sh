@@ -12,7 +12,13 @@ touch "$FLAG"
 trap 'rm -f "$FLAG"; pkill -x qlmanage 2>/dev/null || true' EXIT
 
 echo "== Registrace"
-pluginkit -m -D -vv -p com.apple.quicklook.preview | grep -A2 "cz.elvisek.mdview.quicklook" | tee "$WORK/registration.txt"
+# Hned po `pluginkit -a` (make install) databáze rozšíření ještě nemusí registraci znát – na CI chvíli trvá.
+: > "$WORK/registration.txt"
+for _ in $(seq 1 30); do
+    pluginkit -m -D -vv -p com.apple.quicklook.preview | grep -A2 "cz.elvisek.mdview.quicklook" > "$WORK/registration.txt" && break
+    sleep 0.5
+done
+cat "$WORK/registration.txt"
 
 cp "$ROOT/Samples/showcase.md" "$WORK/showcase.md"
 cp -R "$ROOT/Samples/img" "$WORK/img"

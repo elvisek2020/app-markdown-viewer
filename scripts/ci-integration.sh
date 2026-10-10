@@ -94,6 +94,9 @@ check("úpravy: konflikt – ponechat moje / načíst z disku",
 check("úpravy: synchronizace posunu editor ↔ náhled",
       abs(e.get("syncPreviewLine", 0) - e.get("syncEditorLine", -9)) <= 1 and abs(e.get("syncBackEditorLine", 0) - 150) <= 1, e)
 check("úpravy: vypnutí režimu uloží rozepsané", e.get("finished") and e.get("savedOnFinish"), e)
+check("úpravy: přepínač Zdroj | Upravit (rovnou mezi režimy, vypnutí), zabarvená lišta",
+      e.get("switchShowsEdit") and e.get("editTint") and e.get("clickEdit") and e.get("clickSourceWhileEditing")
+      and e.get("clickEditWhileSource") and e.get("clickEditOff"), e)
 
 s = json.load(open(f"{work}/security.json"))["phase1"]
 check("security.md: žádné skripty, iframy, formuláře",

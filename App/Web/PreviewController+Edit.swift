@@ -7,11 +7,22 @@ extension PreviewController {
     var isEditing: Bool { editor != nil }
 
     @objc func toggleEditMode(_ sender: Any?) {
-        if isEditing {
-            finishEditing()
-        } else {
+        setPaneMode(isEditing ? .preview : .edit)
+    }
+
+    /// Přepne, co je vedle náhledu. Vrací `false`, když uživatel ukončení úprav zrušil (konflikt).
+    @discardableResult
+    func setPaneMode(_ mode: PaneMode) -> Bool {
+        guard mode != paneMode else { return true }
+        switch mode {
+        case .edit:
+            setSourceVisible(false)
             beginEditing()
+        case .source, .preview:
+            guard finishEditing() else { return false }
+            setSourceVisible(mode == .source)
         }
+        return true
     }
 
     /// ⌘S v režimu úprav: uložit hned, nečekat na automatické uložení. PreviewController je
@@ -40,7 +51,7 @@ extension PreviewController {
             }
         }
         updateEditBanner()
-        onEditModeChange?(true)
+        onPaneModeChange?(paneMode)
     }
 
     /// Vypne režim úprav (uloží; konflikt nebo chybu ukládání nechá rozhodnout uživatele).
@@ -59,7 +70,7 @@ extension PreviewController {
         view.window?.makeFirstResponder(webView)
         Task { try? await call("mdv.setEditing(false)") }
         updateEditBanner()
-        onEditModeChange?(false)
+        onPaneModeChange?(paneMode)
         return true
     }
 

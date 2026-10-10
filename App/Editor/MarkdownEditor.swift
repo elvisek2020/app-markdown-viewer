@@ -2,7 +2,8 @@ import AppKit
 
 /// Jednoduchý editor Markdownu: `NSTextView` (TextKit 1 – přesné pozice řádků pro synchronizaci
 /// s náhledem), neproporcionální písmo, bez automatických náhrad a kontroly pravopisu.
-/// Vzniká až při zapnutí režimu úprav, takže start aplikace nezdržuje.
+/// Vzniká až při zapnutí režimu úprav, takže start aplikace nezdržuje. Barvy, písmo a řádkování
+/// má stejné jako zdrojový panel (`--mdv-source-*` v app.css), aby přepnutí zdroj ↔ úpravy nebylo znát.
 final class MarkdownEditor: NSObject, NSTextViewDelegate {
     let scrollView = NSScrollView()
     let textView = NSTextView(usingTextLayoutManager: false)
@@ -30,7 +31,7 @@ final class MarkdownEditor: NSObject, NSTextViewDelegate {
         textView.isHorizontallyResizable = false
         textView.autoresizingMask = [.width]
         textView.textContainer?.widthTracksTextView = true
-        textView.textContainerInset = NSSize(width: 10, height: 12)
+        textView.textContainerInset = NSSize(width: 12, height: 16)
         textView.isRichText = false
         textView.importsGraphics = false
         textView.allowsUndo = true
@@ -44,11 +45,20 @@ final class MarkdownEditor: NSObject, NSTextViewDelegate {
         textView.isAutomaticLinkDetectionEnabled = false
         textView.isAutomaticDataDetectionEnabled = false
         textView.smartInsertDeleteEnabled = false
-        textView.backgroundColor = .textBackgroundColor
+        textView.backgroundColor = Self.background
         textView.insertionPointColor = .controlAccentColor
+        scrollView.backgroundColor = Self.background
+        // Řádkování 1,6 jako zdrojový panel; posun účaří zarovná text doprostřed vyššího řádku.
+        let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        let lineHeight = (font.pointSize * 1.6).rounded()
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.minimumLineHeight = lineHeight
+        paragraph.maximumLineHeight = lineHeight
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular),
-            .foregroundColor: NSColor.textColor,
+            .font: font,
+            .foregroundColor: Self.foreground,
+            .paragraphStyle: paragraph,
+            .baselineOffset: (lineHeight - (font.ascender - font.descender)) / 2,
         ]
         textView.typingAttributes = attributes
         textView.textStorage?.setAttributedString(NSAttributedString(string: text, attributes: attributes))
@@ -60,6 +70,19 @@ final class MarkdownEditor: NSObject, NSTextViewDelegate {
             self, selector: #selector(boundsDidChange(_:)),
             name: NSView.boundsDidChangeNotification, object: scrollView.contentView
         )
+    }
+
+    /// Barvy zdrojového panelu (app.css: --mdv-source-bg, --mdv-source-fg) podle vzhledu.
+    private static let background = NSColor(name: "MDViewEditorBackground") { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(srgbRed: 0x01 / 255, green: 0x04 / 255, blue: 0x09 / 255, alpha: 1)
+            : NSColor(srgbRed: 0xF6 / 255, green: 0xF8 / 255, blue: 0xFA / 255, alpha: 1)
+    }
+
+    private static let foreground = NSColor(name: "MDViewEditorForeground") { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(srgbRed: 0xE6 / 255, green: 0xED / 255, blue: 0xF3 / 255, alpha: 1)
+            : NSColor(srgbRed: 0x1F / 255, green: 0x23 / 255, blue: 0x28 / 255, alpha: 1)
     }
 
     // MARK: - NSTextViewDelegate

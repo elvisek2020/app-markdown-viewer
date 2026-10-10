@@ -6,8 +6,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     let preview: PreviewController
     private let outline = OutlineState()
     private let split = NSSplitViewController()
-    private var sourceButton: NSButton?
-    private var editButton: NSButton?
+    private var paneSwitch: PaneModeSwitch!
     private var frameMemory: WindowFrameMemory?
 
     init(model: DocumentModel) {
@@ -37,6 +36,8 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         window.contentViewController = split
         window.setContentSize(NSSize(width: 1100, height: 1000))
 
+        paneSwitch = PaneModeSwitch(window: window)
+        paneSwitch.attach(preview)
         let toolbar = NSToolbar(identifier: "MDViewDocumentToolbar")
         toolbar.delegate = self
         toolbar.displayMode = .iconOnly
@@ -50,11 +51,6 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
 
         outline.onSelect = { [weak preview] item in preview?.scroll(toLine: item.line) }
         preview.onTopLineChange = { [weak outline] line in outline?.currentLine = line }
-        preview.onSourceVisibilityChange = { [weak self] visible in self?.sourceButton?.state = visible ? .on : .off }
-        preview.onEditModeChange = { [weak self] editing in
-            self?.editButton?.state = editing ? .on : .off
-            self?.sourceButton?.isEnabled = !editing
-        }
         model.observeRender { [weak outline] document in outline?.items = document.outline }
         model.observeMove { [weak self] url in self?.updateSubtitle(url) }
         updateSubtitle(model.url)
@@ -81,7 +77,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.edit, ToolbarItems.source, ToolbarItems.search]
+        [.toggleSidebar, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.mode, ToolbarItems.search]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -94,14 +90,8 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         willBeInsertedIntoToolbar flag: Bool
     ) -> NSToolbarItem? {
         switch itemIdentifier {
-        case ToolbarItems.source:
-            let (item, button) = ToolbarItems.sourceToggle(isOn: preview.isSourceVisible)
-            sourceButton = button
-            return item
-        case ToolbarItems.edit:
-            let (item, button) = ToolbarItems.editToggle(isOn: preview.isEditing)
-            editButton = button
-            return item
+        case ToolbarItems.mode:
+            return paneSwitch.item
         case ToolbarItems.search:
             let item = ToolbarItems.searchItem()
             ToolbarItems.connect(item, to: preview)

@@ -47,6 +47,13 @@ enum EditSelfTest {
             report["editing"] = preview.isEditing
             report["editorFocused"] = window.firstResponder === editor.textView
             report["sourcePaneHidden"] = await preview.callString("return String(document.body.classList.contains('mdv-with-source'))") == "false"
+            let modeControl = window.toolbar?.items.first { $0.itemIdentifier == ToolbarItems.mode }?.view as? NSSegmentedControl
+            @MainActor func segments() -> [Bool] {
+                guard let modeControl else { return [] }
+                return [modeControl.isSelected(forSegment: 0), modeControl.isSelected(forSegment: 1)]
+            }
+            report["switchShowsEdit"] = segments() == [false, true]
+            report["editTint"] = window.titlebarAppearsTransparent
 
             // 2. Synchronizace posunu editor → náhled a náhled → editor
             try? await Task.sleep(for: .milliseconds(300))
@@ -132,6 +139,28 @@ enum EditSelfTest {
             preview.toggleEditMode(nil)
             report["finished"] = !preview.isEditing && preview.editor == nil && !container(preview).isEditorVisible
             report["savedOnFinish"] = disk().hasPrefix("Poslední úprava.\n# Agent přepsal")
+
+            // 8. Přepínač Zdroj | Upravit: klik na druhý režim přepne rovnou, klik na zapnutý ho vypne.
+            @MainActor func click(_ segment: Int) {
+                guard let modeControl else { return }
+                modeControl.setSelected(!modeControl.isSelected(forSegment: segment), forSegment: segment)
+                modeControl.sendAction(modeControl.action, to: modeControl.target)
+            }
+            func sourceShown() async -> Bool {
+                await preview.callString("return String(document.body.classList.contains('mdv-with-source'))") == "true"
+            }
+            click(1)
+            report["clickEdit"] = preview.paneMode == .edit && segments() == [false, true] && window.titlebarAppearsTransparent
+            click(0)
+            let sourceAppeared = await waitUntil(timeout: 1) { await sourceShown() }
+            report["clickSourceWhileEditing"] = preview.paneMode == .source && preview.editor == nil && segments() == [true, false]
+                && !window.titlebarAppearsTransparent && sourceAppeared
+            click(1)
+            let sourceHidden = await waitUntil(timeout: 1) { !(await sourceShown()) }
+            report["clickEditWhileSource"] = preview.paneMode == .edit && preview.editor != nil && segments() == [false, true]
+                && sourceHidden
+            click(1)
+            report["clickEditOff"] = preview.paneMode == .preview && segments() == [false, false] && !window.titlebarAppearsTransparent
             finish(report, to: reportPath)
         }
     }
