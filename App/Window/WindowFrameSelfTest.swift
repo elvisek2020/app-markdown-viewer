@@ -19,9 +19,12 @@ enum WindowFrameSelfTest {
                 finish(["error": "první okno se neotevřelo"], to: reportPath)
                 return
             }
+            // Rám se musí vejít i na malou obrazovku (CI runner má 1024 × 737); porovnává se se
+            // skutečným rámem po nastavení – AppKit okno přesahující obrazovku posune.
             let visible = first.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
-            let target = NSRect(x: visible.minX + 140, y: visible.minY + 120, width: 840, height: 640)
-            first.setFrame(target, display: true)
+            let size = NSSize(width: min(840, visible.width - 200), height: min(640, visible.height - 160))
+            first.setFrame(NSRect(origin: NSPoint(x: visible.minX + 100, y: visible.minY + 60), size: size), display: true)
+            let target = first.frame
             (first.windowController?.document as? NSDocument)?.close()
             report["target"] = NSStringFromRect(target)
             report["saved"] = UserDefaults.standard.string(forKey: defaultsKey) ?? ""
