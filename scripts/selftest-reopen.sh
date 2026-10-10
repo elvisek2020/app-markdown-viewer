@@ -1,6 +1,6 @@
 #!/bin/bash
-# Self-test znovuotevření (Debug build): první spuštění otevře soubor a pracovní složku a ukončí se,
-# druhé spuštění bez souborů je musí otevřít samo (bez panelu Otevřít). Používá vlastní klíč
+# Self-test znovuotevření (Debug build): první spuštění otevře dva soubory a pracovní složku a ukončí se,
+# druhé spuštění bez souborů musí samo otevřít poslední dva (limit 2, bez panelu Otevřít). Používá vlastní klíč
 # v předvolbách, seznam uživatele nečte ani nemění.
 set -euo pipefail
 
@@ -15,13 +15,14 @@ trap cleanup EXIT
 WORK=$(mktemp -d /tmp/mdview-reopen.XXXXXX)
 mkdir -p "$WORK/slozka"
 printf '# Poznámky\n' > "$WORK/poznamky.md"
+printf '# Plán\n' > "$WORK/plan.md"
 printf '# Ve složce\n' > "$WORK/slozka/README.md"
 REPORT="$WORK/report.json"
-ARGS=(-MDViewSelfTestReopen "$REPORT" -MDViewSelfTestReopenCount 2 -ApplePersistenceIgnoreState YES)
+ARGS=(-MDViewSelfTestReopen "$REPORT" -MDViewSelfTestReopenCount 3 -reopenLimit 2 -ApplePersistenceIgnoreState YES)
 
 pkill -f "$APP/Contents/MacOS/MDView" 2>/dev/null || true
 sleep 0.5
-open -n -g -W -a "$APP" "$WORK/poznamky.md" "$WORK/slozka" --args "${ARGS[@]}" -MDViewSelfTestReopenPhase 1
+open -n -g -W -a "$APP" "$WORK/poznamky.md" "$WORK/plan.md" "$WORK/slozka" --args "${ARGS[@]}" -MDViewSelfTestReopenPhase 1
 open -n -g -a "$APP" --args "${ARGS[@]}" -MDViewSelfTestReopenPhase 2
 for _ in $(seq 1 40); do
     [ -f "$REPORT" ] && break

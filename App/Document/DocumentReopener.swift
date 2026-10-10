@@ -19,11 +19,14 @@ enum DocumentReopener {
         return Preferences.Key.lastDocuments
     }
 
-    /// Volá se před ukončením aplikace – dokumenty jsou ještě otevřené.
+    /// Volá se před ukončením aplikace – dokumenty jsou ještě otevřené (v pořadí otevření).
+    /// Ukládá se až nejvyšší nabízený počet, aby se zvýšení limitu projevilo hned.
     static func save() {
         guard let key else { return }
         let paths = NSDocumentController.shared.documents.compactMap { $0.fileURL?.path }
-        UserDefaults.standard.set(paths, forKey: key)
+            .suffix(Preferences.reopenLimits.max() ?? 30)
+        // Pole, ne ArraySlice – ten UserDefaults jako seznam neuloží.
+        UserDefaults.standard.set(Array(paths), forKey: key)
     }
 
     /// Otevře naposledy otevřené soubory, které ještě existují. Vrací, jestli se něco otevírá.
@@ -33,6 +36,7 @@ enum DocumentReopener {
         didReopen = true
         let urls = (UserDefaults.standard.stringArray(forKey: key) ?? [])
             .filter { FileManager.default.fileExists(atPath: $0) }
+            .suffix(Preferences.reopenLimit)
             .map { URL(fileURLWithPath: $0) }
         guard !urls.isEmpty else { return false }
         for url in urls {

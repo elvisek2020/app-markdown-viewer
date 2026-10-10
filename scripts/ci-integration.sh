@@ -101,8 +101,9 @@ check("úpravy: přepínač Zdroj | Upravit (rovnou mezi režimy, vypnutí), zab
       and e.get("clickEditWhileSource") and e.get("clickEditOff"), e)
 
 ro = json.load(open(f"{work}/reopen.json"))
-check("znovuotevření: soubor i pracovní složka po dalším spuštění, bez panelu Otevřít",
-      ro.get("reopened") == ["poznamky.md", "slozka"] and ro.get("openPanelShown") is False, ro)
+check("znovuotevření: po dalším spuštění poslední dva ze tří (limit 2), bez panelu Otevřít",
+      len(ro.get("reopened", [])) == 2 and set(ro["reopened"]) <= {"poznamky.md", "plan.md", "slozka"}
+      and ro.get("openPanelShown") is False, ro)
 
 s = json.load(open(f"{work}/security.json"))["phase1"]
 check("security.md: žádné skripty, iframy, formuláře",

@@ -3,13 +3,18 @@ import AppKit
 
 /// Self-test znovuotevření (`scripts/selftest-reopen.sh`), dvě spuštění s vlastním klíčem v předvolbách:
 /// fáze 1 počká na otevřené dokumenty a ukončí aplikaci (seznam se uloží), fáze 2 se spustí bez
-/// souborů a zapíše, co se samo otevřelo a jestli se neukázal panel Otevřít. Pak klíč smaže.
+/// souborů a zapíše, co se samo otevřelo (s limitem `-reopenLimit`) a jestli se neukázal panel
+/// Otevřít. Pak klíč smaže.
 enum ReopenSelfTest {
     static let defaultsKey = "MDViewSelfTestLastDocuments"
     static var reportPath: String? { UserDefaults.standard.string(forKey: "MDViewSelfTestReopen") }
     static var isActive: Bool { reportPath != nil }
     private static var phase: Int { UserDefaults.standard.integer(forKey: "MDViewSelfTestReopenPhase") }
-    private static var expected: Int { UserDefaults.standard.integer(forKey: "MDViewSelfTestReopenCount") }
+    /// Fáze 1 čeká na všechny otevřené dokumenty, fáze 2 na tolik, kolik dovolí limit.
+    private static var expected: Int {
+        let opened = UserDefaults.standard.integer(forKey: "MDViewSelfTestReopenCount")
+        return phase == 1 ? opened : min(opened, Preferences.reopenLimit)
+    }
 
     @MainActor
     static func run() {
