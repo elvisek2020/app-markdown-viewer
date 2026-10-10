@@ -9,11 +9,12 @@ INSTALL_DIR ?= /Applications
 BIN_DIR ?= /opt/homebrew/bin
 SIM_FILE ?= /tmp/mdview-agent.md
 LSREGISTER := /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
-# Číslo buildu = počet commitů: každá verze má jiné CFBundleVersion, takže si Dock a Finder
-# obnoví ikonu i další údaje z cache (se stálým „1“ držel Dock prázdnou ikonu z první instalace).
-BUILD_NUMBER := $(shell git rev-list --count HEAD 2>/dev/null || echo 1)
+# Verze = čas buildu ve formátu RRRRMMDD.HHMM (stejně jako ostatní projekty). Jde do
+# CFBundleShortVersionString i CFBundleVersion aplikace a rozšíření; roste s každým buildem,
+# takže si Dock a Finder obnoví ikonu i další údaje z cache.
+VERSION := $(shell date +%Y%m%d.%H%M)
 XCODEBUILD = xcodebuild -project MDView.xcodeproj -scheme MDView -derivedDataPath "$(DERIVED)" \
-	-destination 'platform=macOS,arch=arm64' -quiet CURRENT_PROJECT_VERSION=$(BUILD_NUMBER)
+	-destination 'platform=macOS,arch=arm64' -quiet MARKETING_VERSION=$(VERSION) CURRENT_PROJECT_VERSION=$(VERSION)
 
 QL_APPEX := Contents/PlugIns/MDViewQuickLook.appex
 
@@ -45,7 +46,7 @@ install: release
 	pluginkit -a "$(INSTALL_DIR)/MDView.app/$(QL_APPEX)"
 	pluginkit -e use -i cz.elvisek.mdview.quicklook
 	@qlmanage -r >/dev/null 2>&1; qlmanage -r cache >/dev/null 2>&1
-	@echo "Nainstalováno: $(INSTALL_DIR)/MDView.app, CLI: $(BIN_DIR)/mdv"
+	@echo "Nainstalováno: $(INSTALL_DIR)/MDView.app (verze $$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$(INSTALL_DIR)/MDView.app/Contents/Info.plist")), CLI: $(BIN_DIR)/mdv"
 	@# Vzor ukotvený na začátek – jinak by pgrep -f našel i tento shell (cesta je v jeho příkazu).
 	@if pgrep -qf "^$(INSTALL_DIR)/MDView.app/Contents/MacOS/MDView"; then \
 		echo "Pozor: MDView běží ze staré verze – ukonči ho (⌘Q) a spusť znovu."; \

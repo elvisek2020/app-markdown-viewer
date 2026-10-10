@@ -7,6 +7,7 @@
 #   mdv -g soubor.md             otevře na pozadí, terminál si nechá fokus
 #   příkaz | mdv -               uloží stdin do dočasného .md a otevře ho
 #   mdv                          spustí MDView
+#   mdv --version                vypíše verzi nainstalované aplikace
 #
 # Skript leží v MDView.app/Contents/Resources/bin a aplikaci hledá podle sebe,
 # aby `open -a MDView` nechytil jinou kopii (např. z DerivedData).
@@ -20,6 +21,11 @@ case "$SELF" in
 esac
 APP=${MDV_APP:-$APP}
 OPEN=${MDV_OPEN:-open}
+
+if [ "${1:-}" = "--version" ] || [ "${1:-}" = "-v" ]; then
+    echo "MDView $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist" 2>/dev/null || echo '?')"
+    exit 0
+fi
 
 BACKGROUND=""
 if [ "${1:-}" = "-g" ]; then

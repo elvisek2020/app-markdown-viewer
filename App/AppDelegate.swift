@@ -45,11 +45,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var muted = text
         muted[.foregroundColor] = NSColor.secondaryLabelColor
         credits.append(NSAttributedString(
-            string: "\n\nNativní Markdown viewer pro soubory, které zapisuje AI agent.",
+            string: "\n\nNativní Markdown viewer",
             attributes: muted
         ))
-        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
+        // Verze RRRRMMDD.HHMM; prázdné číslo buildu skryje závorku za ní (je stejné jako verze).
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .credits: credits,
+            .applicationVersion: Self.version,
+            .version: "",
+        ])
         NSApp.activate()
+    }
+
+    /// Verze aplikace ve formátu RRRRMMDD.HHMM (z Info.plist, dosazuje ji Makefile při buildu).
+    static var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
     }
 
     @objc func showSettings(_ sender: Any?) {

@@ -41,6 +41,7 @@ Ověřování UI dělej přes self-testy (`App/Web/SelfTest.swift`, jen Debug), 
 - Systémový log: v zsh je `log` vestavěný příkaz – vždy `/usr/bin/log show …`.
 - `CLI/mdv` se kopíruje do `MDView.app/Contents/Resources/bin`
 - Parser je `swiftlang/swift-cmark` pinovaný na přesnou verzi, `Package.resolved` je v gitu.
+- Verze aplikace = čas buildu RRRRMMDD.HHMM; dosazuje ji `Makefile` (`MARKETING_VERSION` i `CURRENT_PROJECT_VERSION`), ručně se nikde nemění.
 
 ## Konvence
 

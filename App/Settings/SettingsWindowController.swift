@@ -57,6 +57,10 @@ struct SettingsView: View {
                 Toggle("Nová okna se zdrojovým panelem", isOn: $showSource)
                 Toggle("Hledat bez ohledu na diakritiku", isOn: $ignoreDiacritics)
             }
+            Section {
+                LabeledContent("MDView", value: "Verze \(AppDelegate.version)")
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .frame(width: 480)

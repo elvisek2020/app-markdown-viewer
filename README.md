@@ -64,6 +64,9 @@ claude -p "Navrhni architekturu" | mdv -
 - Neexistující soubor (`mdv plan.md`, který agent teprve vytvoří) `mdv` počká, až vznikne.
 - `mdv -g` otevře soubor na pozadí, takže terminál neztratí fokus.
 - `mdv -` vezme Markdown ze standardního vstupu.
+- `mdv --version` vypíše verzi nainstalované aplikace.
+
+Verze má formát RRRRMMDD.HHMM podle času buildu (například `20261010.1712`). Uvidíš ji v okně O aplikaci, v Nastavení a přes `mdv --version`.
 
 | Zkratka | Akce |
 |---|---|
