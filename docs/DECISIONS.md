@@ -28,6 +28,10 @@ Záznam architektonických rozhodnutí a výsledků spiků. Plné zdůvodnění 
 | D23 | Self-test neukládá rámy oken ani rozdělení (Debug build sdílí předvolby s nainstalovanou aplikací) | implementováno |
 | D24 | Quick Look: view-based `QLPreviewingController` s WKWebView a sdíleným `PreviewSupport`; sandbox + `network.client` + read-only výjimka `/`; bez sítě (app.js i `WKContentRuleList`), bez Mermaidu | implementováno |
 | D25 | Diagnostika Quick Look přes `Logger` do systémového logu, zapínaná souborem v /tmp (kontejner je od macOS 14 zvenku nečitelný) | implementováno |
+| D26 | Pracovní složka jako `WorkspaceDocument` (`public.folder`), `FolderIndex` + `FolderWatcher` (rekurzivní FSEvents) ve FileWatch, režim sledování přepíná na naposledy změněný soubor | implementováno |
+| D27 | Zvýraznění změn z reconciliation (nové klíče bloků), potlačené po renderu vyvolaném nastavením; ⌘J skok na poslední změnu | implementováno |
+| D28 | `mdv` na neexistující soubor čeká v CLI (bez URL schématu, které by mohly volat cizí aplikace) | implementováno |
+| D29 | Lupa per dokument v UserDefaults (nejvýš 200 záznamů, neexistující soubory jdou pryč první) | implementováno |
 | D11 | Build výstupy mimo repo (`~/Library/Caches/MDView`), protože `~/Documents` synchronizuje iCloud a xattr rozbíjejí codesign | přijato |
 
 ## Spiky
@@ -84,3 +88,14 @@ Poznatky:
 - **`log` v zsh:** je to vestavěný příkaz, systémový log se musí volat jako `/usr/bin/log`.
 - **Délka logu:** dlouhé zprávy systémový log ořízne, takže report musí být krátký.
 - **TCC:** čtení obrázku vedle souboru ve složce Dokumenty vyvolá žádost TCC (`kTCCServiceSystemPolicyDocumentsFolder`) pro MDView.
+
+## F5: pracovní složka a doplňky
+
+Integrační testy ověřují:
+- strom pracovní složky bez `node_modules` a `.git`, výchozí výběr README
+- režim sledování: nový soubor agenta → náhled se přepne a vykreslí ho
+- zvýraznění změn: po připsání odstavce je zvýrazněný jen on a ⌘J na něj skočí
+
+Poznatky:
+- **`/private` v cestách:** `URL.resolvingSymlinksInPath()` i `standardizedFileURL` odstraňují prefix `/private`, FSEvents ho ale hlásí. Index a watcher proto porovnávají s kanonickou cestou kořene (`F_GETPATH`) a pracovní složka sjednocuje cesty přes `resolvingSymlinksInPath()`.
+- **Quick Look v CI:** na virtuálním runneru bez GPU trvá náhled 2–3 s. CI ověřuje funkčnost, rychlost se měří lokálně.

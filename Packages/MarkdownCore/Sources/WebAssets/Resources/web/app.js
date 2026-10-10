@@ -28,6 +28,7 @@
     hasContent: false,
     followTail: true,
     remoteImages: true,
+    lastChangeKey: null,
     hold: null,
     mermaidCounter: 0,
   };
@@ -713,6 +714,7 @@
   async function exportContent() {
     await flushDiagrams();
     const clone = content().cloneNode(true);
+    for (const element of clone.querySelectorAll(".mdv-changed")) element.classList.remove("mdv-changed");
     for (const element of clone.querySelectorAll("[data-mdv-key], [data-sourcepos], [data-mermaid-source]")) {
       element.removeAttribute("data-mdv-key");
       element.removeAttribute("data-sourcepos");
@@ -722,6 +724,34 @@
       html: clone.innerHTML,
       title: content().querySelector("h1")?.textContent?.trim() ?? "",
     };
+  }
+
+  // MARK: - Zvýraznění změn
+
+  /** Bloky změněné touto aktualizací krátce bliknou; první z nich je cílem „Přejít na poslední změnu“. */
+  function markChanges(blocks) {
+    state.lastChangeKey = blocks[0].dataset.mdvKey;
+    for (const block of blocks) flashBlock(block);
+  }
+
+  function flashBlock(block) {
+    block.classList.remove("mdv-changed");
+    void block.offsetWidth; // restart animace
+    block.classList.add("mdv-changed");
+    block.addEventListener("animationend", () => block.classList.remove("mdv-changed"), { once: true });
+  }
+
+  function jumpToLastChange() {
+    const key = state.lastChangeKey;
+    // Klíč přežije i nahrazení bloku (Mermaid kontejner klíč přebírá).
+    const target = key ? content().querySelector(`[data-mdv-key="${CSS.escape(key)}"]`) : null;
+    if (!target) return false;
+    releaseAnchor();
+    scroller().scrollTop = elementTop(target) - 40;
+    sync.active = "preview";
+    syncPanes();
+    flashBlock(target);
+    return true;
   }
 
   // MARK: - Tisk
@@ -759,6 +789,7 @@
     rewriteURLs(fragment, payload.baseURL);
     const fresh = reconcile(content(), fragment);
     if (typeof payload.sourceHTML === "string") updateSource(payload.sourceHTML);
+    if (state.hasContent && fresh.length && payload.highlightChanges !== false) markChanges(fresh);
 
     if (anchor) {
       applyAnchor(anchor);
@@ -895,6 +926,7 @@
     exportContent,
     preparePrint,
     finishPrint,
+    jumpToLastChange,
     sourceTopLine: () => sourceLineAt(sourceScroller().scrollTop),
   };
 

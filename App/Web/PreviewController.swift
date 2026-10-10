@@ -19,6 +19,8 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     private var loadedLibraries: Set<WebAssets.Library> = []
     private var restoreLine: Int?
     private var lastRemoteImages = Preferences.remoteImages
+    /// Další render vyvolala změna nastavení nebo zdrojového panelu, ne zápis souboru – bez zvýraznění.
+    private var suppressHighlightOnce = false
 
     /// Zdrojový panel vedle náhledu (stav okna).
     private(set) var isSourceVisible = Preferences.showSourceByDefault
@@ -50,7 +52,7 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsLinkPreview = false
-        webView.pageZoom = UserDefaults.standard.double(forKey: Preferences.Key.pageZoom)
+        webView.pageZoom = Preferences.zoom(for: model.url)
         #if DEBUG
         webView.isInspectable = true
         #endif
@@ -105,7 +107,9 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
                 "baseURL": PreviewSupport.baseURL(for: model.url),
                 "restoreLine": hasContent ? 0 : (restoreLine ?? 0),
                 "remoteImages": Preferences.remoteImages,
+                "highlightChanges": Preferences.highlightChanges && !suppressHighlightOnce,
             ]
+            suppressHighlightOnce = false
             if isSourceVisible, let source = document.sourceHTML {
                 payload["sourceHTML"] = source
             }
@@ -187,9 +191,13 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
 
     private func preferencesChanged() {
         let options = Preferences.renderOptions(includeSource: isSourceVisible)
-        if options != model.options { model.options = options }
+        if options != model.options {
+            suppressHighlightOnce = true
+            model.options = options
+        }
         if Preferences.remoteImages != lastRemoteImages {
             lastRemoteImages = Preferences.remoteImages
+            suppressHighlightOnce = true
             if let rendered = model.rendered { show(rendered) }
         }
         guard isReady else { return }
@@ -202,6 +210,7 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         guard visible != isSourceVisible else { return }
         isSourceVisible = visible
         // Zdroj se renderuje jen se zapnutým panelem – změna voleb spustí nový render.
+        suppressHighlightOnce = true
         model.options = Preferences.renderOptions(includeSource: visible)
         sendSourceState()
         onSourceVisibilityChange?(visible)
@@ -211,6 +220,12 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
 
     @objc func reloadDocument(_ sender: Any?) {
         model.reload()
+    }
+
+    @objc func jumpToLastChange(_ sender: Any?) {
+        Task {
+            if await callString("return String(mdv.jumpToLastChange())") != "true" { NSSound.beep() }
+        }
     }
 
     @objc func toggleSourcePane(_ sender: Any?) {
@@ -237,7 +252,7 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     private func setZoom(_ zoom: Double) {
         let clamped = min(3, max(0.5, (zoom * 10).rounded() / 10))
         webView.pageZoom = clamped
-        UserDefaults.standard.set(clamped, forKey: Preferences.Key.pageZoom)
+        Preferences.setZoom(clamped, for: model.url)
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {

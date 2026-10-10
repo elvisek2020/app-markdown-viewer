@@ -2,6 +2,8 @@
 # mdv – otevře Markdown soubory v MDView.
 #
 #   mdv soubor.md [další.md …]   otevře soubory (relativní cesty vůči aktuálnímu adresáři)
+#   mdv .                        otevře složku jako pracovní prostor (strom .md souborů)
+#   mdv plan.md                  soubor ještě neexistuje → počká, až ho agent vytvoří (Ctrl+C ukončí)
 #   mdv -g soubor.md             otevře na pozadí, terminál si nechá fokus
 #   příkaz | mdv -               uloží stdin do dočasného .md a otevře ho
 #   mdv                          spustí MDView
@@ -16,6 +18,8 @@ case "$SELF" in
     */Contents/Resources/bin/*) APP=${SELF%/Contents/Resources/bin/*} ;;
     *) APP=/Applications/MDView.app ;;
 esac
+APP=${MDV_APP:-$APP}
+OPEN=${MDV_OPEN:-open}
 
 BACKGROUND=""
 if [ "${1:-}" = "-g" ]; then
@@ -24,7 +28,7 @@ if [ "${1:-}" = "-g" ]; then
 fi
 
 if [ $# -eq 0 ]; then
-    exec open $BACKGROUND -a "$APP"
+    exec $OPEN $BACKGROUND -a "$APP"
 fi
 
 for arg in "$@"; do
@@ -33,12 +37,16 @@ for arg in "$@"; do
         mv "$tmp" "$tmp.md"
         cat > "$tmp.md"
         set -- "$@" "$tmp.md"
-    elif [ -d "$arg" ]; then
-        echo "mdv: složky zatím nepodporuji: $arg" >&2
-        exit 1
     elif [ ! -e "$arg" ]; then
-        echo "mdv: soubor neexistuje: $arg" >&2
-        exit 1
+        # Agent soubor teprve vytvoří – počkat (nadřazená složka musí existovat).
+        if [ ! -d "$(dirname "$arg")" ]; then
+            echo "mdv: složka neexistuje: $(dirname "$arg")" >&2
+            exit 1
+        fi
+        echo "mdv: čekám, až vznikne $arg (Ctrl+C ukončí)…" >&2
+        while [ ! -e "$arg" ]; do
+            sleep 0.3
+        done
     fi
 done
 
@@ -51,5 +59,5 @@ $arg"
 done
 
 printf '%s\n' "$files" | sed '/^$/d' | while IFS= read -r file; do
-    open $BACKGROUND -a "$APP" "$file"
+    $OPEN $BACKGROUND -a "$APP" "$file"
 done

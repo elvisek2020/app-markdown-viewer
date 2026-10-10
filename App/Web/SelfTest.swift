@@ -57,7 +57,7 @@ enum SelfTest {
     /// Self-test běží (report, stavový log nebo snímek). Debug build sdílí bundle ID s nainstalovanou
     /// aplikací, takže self-test nesmí ukládat rámy oken a rozdělení do jejích předvoleb.
     static var isActive: Bool {
-        reportPath != nil || statusPath != nil || snapshotPath != nil
+        reportPath != nil || statusPath != nil || snapshotPath != nil || WorkspaceSelfTest.reportPath != nil
     }
 
     static var snapshotPath: String? {
@@ -108,6 +108,7 @@ enum SelfTest {
                 }
                 modify(fileURL) { $0 + "\n\nPřidaný odstavec self-testu.\n" }
             } else if currentPhase == 2 {
+                report["jumpToLastChange"] = await preview.callString("return String(mdv.jumpToLastChange())") ?? "?"
                 // Přepnutí vzhledu musí diagramy překreslit (sonda je po fázi 2 označila).
                 let original = NSApp.appearance
                 NSApp.appearance = NSAppearance(named: NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .aqua : .darkAqua)
@@ -254,6 +255,7 @@ enum SelfTest {
           mermaidReused: svgs.filter((svg) => svg.__mdvSelfTest === 1).length,
           mermaidErrors: [...content.querySelectorAll(".mdv-mermaid-error")].map((e) => e.dataset.error),
           mermaidStale: content.querySelectorAll(".mdv-mermaid-stale svg").length,
+          changed: [...content.querySelectorAll(".mdv-changed")].map((block) => block.textContent.trim().slice(0, 40)),
           mermaidBadge: content.querySelector(".mdv-mermaid-badge")?.textContent ?? null,
           copyTex: !!content.querySelector(".katex") && typeof window.katex === "object",
           hljs: content.querySelectorAll("code.hljs").length,

@@ -17,6 +17,7 @@ import AppKit
     func useSelectionForFind(_ sender: Any?)
     func exportHTMLDocument(_ sender: Any?)
     func exportPDFDocument(_ sender: Any?)
+    func jumpToLastChange(_ sender: Any?)
 }
 
 /// Položky menu specifické pro MDView. Standardní menu je v MainMenu.xib.
@@ -49,8 +50,10 @@ enum MainMenuExtras {
             let items: [NSMenuItem] = [
                 item("Zobrazit osnovu", #selector(NSSplitViewController.toggleSidebar(_:)), "s", [.command, .control]),
                 item("Zobrazit zdroj", #selector(ViewerActions.toggleSourcePane(_:)), "u", [.command, .option]),
+                item("Sledovat změny ve složce", #selector(WorkspaceWindowController.toggleFollowFolderChanges(_:)), "l", [.command, .shift]),
                 .separator(),
                 item("Znovu načíst", #selector(ViewerActions.reloadDocument(_:)), "r", [.command]),
+                item("Přejít na poslední změnu", #selector(ViewerActions.jumpToLastChange(_:)), "j", [.command]),
                 item("Sledovat konec souboru", #selector(ViewerActions.toggleFollowTail(_:)), "", []),
                 .separator(),
                 item("Skutečná velikost", #selector(ViewerActions.actualSizePreview(_:)), "0", [.command]),

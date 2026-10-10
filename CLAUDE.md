@@ -17,6 +17,7 @@ scripts/ci-integration.sh               # obojí + bezpečnostní dokument s kon
 scripts/gh-golden.sh [fixture]          # referenční výstupy GitHub API pro golden testy (po změně fixtures)
 scripts/readme-images.sh                # ikona + snímky náhledu do README (docs/images)
 scripts/quicklook-check.sh              # Quick Look nainstalované aplikace (po make install)
+scripts/selftest-workspace.sh           # pracovní složka: strom, výchozí výběr, režim sledování
 make ql-status                          # registrace Quick Look rozšíření
 ```
 
@@ -33,6 +34,8 @@ Ověřování UI dělej přes self-testy (`App/Web/SelfTest.swift`, jen Debug), 
   - `WebAssets` – šablona, `app.css`, `app.js` (reconciliation bloků, kotva scrollu, Mermaid/KaTeX/hljs) a vendorované knihovny
 - `App/` – AppKit + read-only `NSDocument` (`MarkdownDocument`), `DocumentModel` (watcher + render na pozadí, víc odběratelů), `DocumentWindowController` (osnova ve SwiftUI | náhled, nástrojová lišta), `PreviewController` (+Find, +Export; WKWebView, isolated world `mdview`, `allowsContentJavaScript = false`), scheme handlery `mdv-asset://` a `mdv-file://`, `LinkOpener`, `HTMLExporter`, `Preferences` + okno Nastavení
 - Debug build sdílí bundle ID a předvolby s nainstalovanou aplikací – self-testy nesmí zapisovat do UserDefaults (rámy oken apod.).
+- `App/Workspace/` – pracovní složka (`WorkspaceDocument` pro `public.folder`, `WorkspaceWindowController` se stromem ve SwiftUI a režimem sledování, `ViewerDocumentController` pro výběr složek v Otevřít…); index a hlídání složky jsou ve FileWatch (`FolderIndex`, `FolderWatcher`).
+- Cesty v pracovní složce vždy přes `resolvingSymlinksInPath()` (FSEvents hlásí `/private/var…`, URL normalizace `/private` odstraňuje).
 - `QuickLook/` – Quick Look rozšíření (`MDViewQuickLook.appex`), sdílí `App/Web/PreviewSupport.swift` a `SchemeHandlers.swift`. Spuštěné buildy z DerivedData se registrují u LaunchServices; self-test skripty a `make install` je odregistrují, aby rozšíření nesoupeřilo s nainstalovaným.
 - Systémový log: v zsh je `log` vestavěný příkaz – vždy `/usr/bin/log show …`.
 - `CLI/mdv` se kopíruje do `MDView.app/Contents/Resources/bin`

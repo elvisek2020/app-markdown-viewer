@@ -19,6 +19,8 @@
   --mdv-find: rgba(255, 213, 0, 0.45);
   --mdv-find-current: #ff9632;
   --mdv-status-bg: rgba(255, 255, 255, 0.92);
+  --mdv-change-bg: rgba(255, 223, 93, 0.38);
+  --mdv-change-bar: #d4a72c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -41,6 +43,8 @@
     --mdv-find: rgba(187, 128, 9, 0.5);
     --mdv-find-current: #f0883e;
     --mdv-status-bg: rgba(22, 27, 34, 0.92);
+    --mdv-change-bg: rgba(187, 128, 9, 0.3);
+    --mdv-change-bar: #bb8009;
   }
 }
 
@@ -162,6 +166,31 @@ body.mdv-with-source #mdv-divider:hover {
 
 #mdv-find-status[hidden] {
   display: none;
+}
+
+/* Bloky změněné poslední aktualizací souboru krátce bliknou (proužek vlevo + podbarvení). */
+@keyframes mdv-changed {
+  0%,
+  35% {
+    background-color: var(--mdv-change-bg);
+    box-shadow: -12px 0 0 -8px var(--mdv-change-bar);
+  }
+
+  100% {
+    background-color: transparent;
+    box-shadow: -12px 0 0 -8px transparent;
+  }
+}
+
+.markdown-body .mdv-changed {
+  border-radius: 3px;
+  animation: mdv-changed 3s ease-out;
+}
+
+@media print {
+  .markdown-body .mdv-changed {
+    animation: none;
+  }
 }
 
 /* Vzdálené obrázky vypnuté v nastavení. */

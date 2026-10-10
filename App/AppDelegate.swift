@@ -2,6 +2,11 @@ import AppKit
 
 @main
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // První vytvořená instance se stane NSDocumentController.shared (Otevřít… pak umí i složky).
+        _ = ViewerDocumentController()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Preferences.registerDefaults()
         Preferences.applyAppearance()

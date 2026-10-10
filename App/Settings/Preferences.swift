@@ -14,6 +14,8 @@ enum Preferences {
         static let ignoreDiacritics = "findIgnoreDiacritics"
         static let showSource = "showSourceByDefault"
         static let sourceWidth = "sourceWidth"
+        static let highlightChanges = "highlightChanges"
+        static let zoomByFile = "pageZoomByFile"
     }
 
     enum Appearance: String, CaseIterable {
@@ -32,6 +34,7 @@ enum Preferences {
             Key.ignoreDiacritics: true,
             Key.showSource: false,
             Key.sourceWidth: 0.45,
+            Key.highlightChanges: true,
         ])
     }
 
@@ -52,6 +55,23 @@ enum Preferences {
     static var ignoreDiacritics: Bool { defaults.bool(forKey: Key.ignoreDiacritics) }
     static var showSourceByDefault: Bool { defaults.bool(forKey: Key.showSource) }
     static var sourceWidth: Double { defaults.double(forKey: Key.sourceWidth) }
+    static var highlightChanges: Bool { defaults.bool(forKey: Key.highlightChanges) }
+
+    /// Lupa je per dokument (podle cesty); dokument bez záznamu má 100 %.
+    static func zoom(for url: URL) -> Double {
+        (defaults.dictionary(forKey: Key.zoomByFile) as? [String: Double])?[url.path] ?? 1
+    }
+
+    static func setZoom(_ zoom: Double, for url: URL) {
+        var zooms = (defaults.dictionary(forKey: Key.zoomByFile) as? [String: Double]) ?? [:]
+        zooms[url.path] = zoom == 1 ? nil : zoom
+        // Nenechat seznam růst donekonečna (soubory, které už neexistují, jdou pryč první).
+        if zooms.count > 200 {
+            for path in zooms.keys where !FileManager.default.fileExists(atPath: path) { zooms[path] = nil }
+            while zooms.count > 200, let any = zooms.keys.first { zooms[any] = nil }
+        }
+        defaults.set(zooms, forKey: Key.zoomByFile)
+    }
 
     static var appearance: Appearance {
         Appearance(rawValue: defaults.string(forKey: Key.appearance) ?? "") ?? .system

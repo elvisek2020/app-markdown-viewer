@@ -8,9 +8,6 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     private let split = NSSplitViewController()
     private var sourceButton: NSButton?
 
-    private static let sourceItem = NSToolbarItem.Identifier("cz.elvisek.mdview.source")
-    private static let searchItem = NSToolbarItem.Identifier("cz.elvisek.mdview.search")
-
     init(model: DocumentModel) {
         preview = PreviewController(model: model)
         let window = NSWindow(
@@ -76,7 +73,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .flexibleSpace, Self.sourceItem, Self.searchItem]
+        [.toggleSidebar, .flexibleSpace, ToolbarItems.source, ToolbarItems.search]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -89,26 +86,13 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         willBeInsertedIntoToolbar flag: Bool
     ) -> NSToolbarItem? {
         switch itemIdentifier {
-        case Self.sourceItem:
-            let image = NSImage(systemSymbolName: "chevron.left.forwardslash.chevron.right", accessibilityDescription: "Zdroj")!
-            let button = NSButton(image: image, target: nil, action: #selector(ViewerActions.toggleSourcePane(_:)))
-            button.setButtonType(.pushOnPushOff)
-            button.bezelStyle = .toolbar
-            button.state = preview.isSourceVisible ? .on : .off
+        case ToolbarItems.source:
+            let (item, button) = ToolbarItems.sourceToggle(isOn: preview.isSourceVisible)
             sourceButton = button
-            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
-            item.view = button
-            item.label = "Zdroj"
-            item.toolTip = "Zobrazit zdroj vedle náhledu (⌥⌘U)"
             return item
-        case Self.searchItem:
-            let item = NSSearchToolbarItem(itemIdentifier: itemIdentifier)
-            item.searchField.placeholderString = "Hledat v dokumentu"
-            item.searchField.delegate = preview
-            item.searchField.sendsWholeSearchString = false
-            item.label = "Hledat"
-            preview.searchField = item.searchField
-            preview.searchItem = item
+        case ToolbarItems.search:
+            let item = ToolbarItems.searchItem()
+            ToolbarItems.connect(item, to: preview)
             return item
         default:
             return nil

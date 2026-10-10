@@ -16,6 +16,8 @@ echo "== Bezpečnostní dokument"
 "$ROOT/scripts/selftest.sh" "$ROOT/Samples/security.md" > "$WORK/security.json"
 echo "== Zátěž auto-reloadu"
 "$ROOT/scripts/selftest-sim.sh" | tee "$WORK/sim.txt"
+echo "== Pracovní složka"
+"$ROOT/scripts/selftest-workspace.sh" > "$WORK/workspace.json"
 
 python3 - "$WORK" "$LIMIT_MS" <<'PY'
 import json, re, sys
@@ -41,6 +43,9 @@ check("alerts s ikonami, footnotes, task listy, front matter",
 check("lokální obrázky přes mdv-file", bool(p1.get("images")) and all(i["loaded"] for i in p1["images"]))
 check("změna souboru nepřerenderuje diagram", isinstance(p2, dict) and p2.get("mermaidReused", 0) >= 1)
 check("rozbitý diagram ukazuje poslední platnou verzi", isinstance(p3, dict) and p3.get("mermaidStale", 0) >= 1)
+check("zvýraznění změny: jen připsaný odstavec + skok na poslední změnu",
+      isinstance(p2, dict) and p2.get("changed") == ["Přidaný odstavec self-testu."] and r.get("jumpToLastChange") == "true",
+      {"changed": p2.get("changed") if isinstance(p2, dict) else None, "jump": r.get("jumpToLastChange")})
 theme = r.get("themeSwitch", {})
 check("přepnutí vzhledu překreslí diagram", isinstance(theme, dict) and theme.get("mermaidSvg", 0) >= 1 and theme.get("mermaidReused") == 0)
 
@@ -56,6 +61,11 @@ check("export PDF: stránkovaný, celý obsah až po poslední stranu",
 sync = f3.get("sync", {})
 check("skok na nadpis zarovná zdroj na stejný řádek", f3.get("sourceReady") and abs(sync.get("sourceTop", 0) - sync.get("alerts", -9)) <= 0.5, sync)
 check("synchronizace zdroj → náhled", sync.get("previewAfterSource") == sync.get("table"), sync)
+
+w = json.load(open(f"{work}/workspace.json"))
+check("pracovní složka: strom bez node_modules/.git, výchozí README", w.get("fileCount") == 2 and w.get("initial") == "README.md", w)
+check("pracovní složka: sledování přepne na nový soubor agenta",
+      w.get("followed") == "agent/vystup.md" and w.get("followedTitle") == "Výstup agenta", w)
 
 s = json.load(open(f"{work}/security.json"))["phase1"]
 check("security.md: žádné skripty, iframy, formuláře",

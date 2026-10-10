@@ -29,6 +29,7 @@ struct SettingsView: View {
     @AppStorage(Preferences.Key.followTail) private var followTail = true
     @AppStorage(Preferences.Key.showSource) private var showSource = false
     @AppStorage(Preferences.Key.ignoreDiacritics) private var ignoreDiacritics = true
+    @AppStorage(Preferences.Key.highlightChanges) private var highlightChanges = true
 
     var body: some View {
         Form {
@@ -51,6 +52,7 @@ struct SettingsView: View {
                 Toggle("Načítat obrázky z internetu", isOn: $remoteImages)
             }
             Section("Chování") {
+                Toggle("Zvýrazňovat bloky změněné při aktualizaci souboru", isOn: $highlightChanges)
                 Toggle("Sledovat konec souboru, když je náhled odscrollovaný dolů", isOn: $followTail)
                 Toggle("Nová okna se zdrojovým panelem", isOn: $showSource)
                 Toggle("Hledat bez ohledu na diakritiku", isOn: $ignoreDiacritics)

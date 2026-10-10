@@ -54,4 +54,5 @@ jobs:
       - name: Instalace a Quick Look
         run: |
           make install
-          LIMIT_MS=1500 scripts/quicklook-check.sh
+          # Virtuální runner bez GPU je pomalý – v CI se ověřuje funkčnost, rychlost lokálně (500 ms).
+          LIMIT_MS=15000 scripts/quicklook-check.sh
