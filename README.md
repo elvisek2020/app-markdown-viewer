@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/icon.png" width="128" height="128" alt="Ikona MDView">
+  <img src=".github/images/icon.png" width="128" height="128" alt="Ikona MDView">
 </p>
 
 <h1 align="center">MDView</h1>
@@ -10,8 +10,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/preview-dark.png">
-    <img src="docs/images/preview-light.png" width="720" alt="Náhled dokumentu v MDView">
+    <source media="(prefers-color-scheme: dark)" srcset=".github/images/preview-dark.png">
+    <img src=".github/images/preview-light.png" width="720" alt="Náhled dokumentu v MDView">
   </picture>
 </p>
 
@@ -32,12 +32,28 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/source-dark.png">
-    <img src="docs/images/source-light.png" width="860" alt="Zdrojový panel vedle náhledu">
+    <source media="(prefers-color-scheme: dark)" srcset=".github/images/source-dark.png">
+    <img src=".github/images/source-light.png" width="860" alt="Zdrojový panel vedle náhledu">
   </picture>
 </p>
 
 ## Instalace
+
+### Bez buildu
+
+Požadavky: macOS 15+, Apple Silicon.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/elvisek2020/app-markdown-viewer/main/install.sh | bash
+```
+
+Skript stáhne poslední vydání z [Releases](https://github.com/elvisek2020/app-markdown-viewer/releases) a nainstaluje `MDView.app` do `/Applications`. Příkaz `mdv` nalinkuje do `/opt/homebrew/bin` (nebo `/usr/local/bin`) a zaregistruje Quick Look. Stejným příkazem se aplikace aktualizuje. Konkrétní verzi nainstaluješ přes `MDV_VERSION=20261010.1754`.
+
+Aplikace je podepsaná, ale není notarizovaná. Když `MDView.zip` stáhneš ručně přes prohlížeč, macOS ji při prvním spuštění zablokuje. Povolíš ji v Nastavení systému → Soukromí a zabezpečení → Přesto otevřít.
+
+Odinstalace: `rm -rf /Applications/MDView.app "$(which mdv)"`.
+
+### Ze zdrojů
 
 Požadavky: macOS 15+, Apple Silicon, Xcode 26+, [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
@@ -98,7 +114,8 @@ scripts/quicklook-check.sh # Quick Look nainstalované aplikace (registrace, vyk
 scripts/gh-golden.sh     # obnoví referenční výstupy GitHubu pro golden testy
 scripts/readme-images.sh # ikona a snímky do README
 make vendor              # aktualizace přibalených knihoven (web-vendor/package.json)
+make package             # podepsaný Release build v zipu pro instalaci bez buildu
+make publish             # vydání na GitHub Releases (tag v<verze>, asset MDView.zip)
 ```
 
-- Architektura a rozhodnutí: [docs/PLAN.md](docs/PLAN.md) a [docs/DECISIONS.md](docs/DECISIONS.md).
-- Licence knihoven třetích stran: [docs/THIRD_PARTY_LICENSES.md](docs/THIRD_PARTY_LICENSES.md).
+Licence knihoven třetích stran: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

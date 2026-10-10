@@ -29,6 +29,9 @@ targets:
           copyFiles:
             destination: resources
             subpath: bin
+      # Licence přibalených knihoven musí jít s binárním balíčkem (GitHub Releases).
+      - path: THIRD_PARTY_LICENSES.md
+        buildPhase: resources
     dependencies:
       - package: MarkdownCore
         product: MarkdownCore

@@ -9,6 +9,8 @@ INSTALL_DIR ?= /Applications
 BIN_DIR ?= /opt/homebrew/bin
 SIM_FILE ?= /tmp/mdview-agent.md
 LSREGISTER := /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+RELEASE_DIR := $(BUILD_ROOT)/release
+RELEASE_ZIP := $(RELEASE_DIR)/MDView.zip
 # Verze = čas buildu ve formátu RRRRMMDD.HHMM (stejně jako ostatní projekty). Jde do
 # CFBundleShortVersionString i CFBundleVersion aplikace a rozšíření; roste s každým buildem,
 # takže si Dock a Finder obnoví ikonu i další údaje z cache.
@@ -18,7 +20,7 @@ XCODEBUILD = xcodebuild -project MDView.xcodeproj -scheme MDView -derivedDataPat
 
 QL_APPEX := Contents/PlugIns/MDViewQuickLook.appex
 
-.PHONY: gen build release run install uninstall unregister-dev ql-status test test-core test-watch sim vendor clean
+.PHONY: gen build release run install package publish uninstall unregister-dev ql-status test test-core test-watch sim vendor clean
 
 gen:
 	xcodegen generate --quiet
@@ -51,6 +53,20 @@ install: release
 	@if pgrep -qf "^$(INSTALL_DIR)/MDView.app/Contents/MacOS/MDView"; then \
 		echo "Pozor: MDView běží ze staré verze – ukonči ho (⌘Q) a spusť znovu."; \
 	fi
+
+# Balíček pro instalaci bez buildu (install.sh, GitHub Releases): podepsaný Release build v zipu.
+# Název assetu je vždy MDView.zip – odkaz releases/latest/download/MDView.zip pak ukazuje na poslední verzi.
+package: release
+	rm -rf "$(RELEASE_DIR)" && mkdir -p "$(RELEASE_DIR)"
+	codesign --verify --deep --strict "$(APP_RELEASE)"
+	@codesign -dv "$(APP_RELEASE)" 2>&1 | grep -q '^TeamIdentifier=[A-Z0-9]' \
+		|| echo "Pozor: ad-hoc podpis (chybí Config/Local.xcconfig) – macOS bude po každé verzi znovu žádat o oprávnění."
+	ditto -c -k --sequesterRsrc --keepParent "$(APP_RELEASE)" "$(RELEASE_ZIP)"
+	@echo "Balíček: $(RELEASE_ZIP) (verze $(VERSION), $$(du -h "$(RELEASE_ZIP)" | cut -f1))"
+
+# Vydání na GitHubu: tag v<verze> na pushnutém commitu, asset MDView.zip.
+publish: package
+	scripts/publish.sh "$(VERSION)" "$(RELEASE_ZIP)"
 
 # Buildy v DerivedData (Debug pro self-testy, Release před instalací) se při spuštění registrují
 # u LaunchServices – jejich Quick Look rozšíření by soupeřilo s nainstalovaným.

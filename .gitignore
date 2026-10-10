@@ -20,3 +20,7 @@ node_modules/
 
 # Výstupy skriptů
 scripts/.sim/
+
+# Lokální podklady (plán, rozhodnutí) a pokyny pro agenty – jen na tomto Macu, ne v repu
+docs/
+CLAUDE.md

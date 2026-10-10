@@ -5,8 +5,8 @@ on:
     branches: [main]
     paths-ignore:
       - README.md
-      - CLAUDE.md
-      - docs/**
+      - THIRD_PARTY_LICENSES.md
+      - .github/images/**
   pull_request:
   workflow_dispatch:
 
