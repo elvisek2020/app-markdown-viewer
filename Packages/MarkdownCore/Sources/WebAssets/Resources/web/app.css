@@ -6,6 +6,19 @@
   --mdv-banner-fg: #3b2300;
   --mdv-banner-border: #d4a72c66;
   --mdv-error: #d1242f;
+  --mdv-source-bg: #f6f8fa;
+  --mdv-source-fg: #1f2328;
+  --mdv-source-muted: #8c959f;
+  --mdv-source-heading: #0550ae;
+  --mdv-source-code: #0a3069;
+  --mdv-source-accent: #953800;
+  --mdv-source-link: #0969da;
+  --mdv-source-math: #8250df;
+  --mdv-source-html: #116329;
+  --mdv-divider: #d1d9e0;
+  --mdv-find: rgba(255, 213, 0, 0.45);
+  --mdv-find-current: #ff9632;
+  --mdv-status-bg: rgba(255, 255, 255, 0.92);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -15,6 +28,19 @@
     --mdv-banner-fg: #e3b341;
     --mdv-banner-border: #bb800966;
     --mdv-error: #f85149;
+    --mdv-source-bg: #010409;
+    --mdv-source-fg: #e6edf3;
+    --mdv-source-muted: #6e7681;
+    --mdv-source-heading: #79c0ff;
+    --mdv-source-code: #a5d6ff;
+    --mdv-source-accent: #ffa657;
+    --mdv-source-link: #58a6ff;
+    --mdv-source-math: #d2a8ff;
+    --mdv-source-html: #7ee787;
+    --mdv-divider: #30363d;
+    --mdv-find: rgba(187, 128, 9, 0.5);
+    --mdv-find-current: #f0883e;
+    --mdv-status-bg: rgba(22, 27, 34, 0.92);
   }
 }
 
@@ -25,11 +51,125 @@ body {
   background: var(--mdv-page);
 }
 
-#mdv-scroll {
+/* Panely: volitelný zdroj | táhlo | náhled. */
+#mdv-panes {
   position: fixed;
   inset: 0;
+  display: flex;
+}
+
+#mdv-scroll,
+#mdv-source-scroll {
+  /* position: relative → offsetTop řádků zdroje se počítá vůči obsahu panelu. */
+  position: relative;
   overflow: auto;
   overscroll-behavior: contain;
+  outline: none;
+}
+
+#mdv-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#mdv-source-scroll,
+#mdv-divider {
+  display: none;
+}
+
+body.mdv-with-source #mdv-source-scroll {
+  display: block;
+  flex: 0 0 var(--mdv-source-width, 45%);
+  background: var(--mdv-source-bg);
+}
+
+body.mdv-with-source #mdv-divider {
+  display: block;
+  flex: 0 0 5px;
+  cursor: col-resize;
+  background: var(--mdv-divider);
+  background-clip: content-box;
+  padding: 0 2px;
+  box-sizing: border-box;
+}
+
+body.mdv-with-source #mdv-divider:hover {
+  padding: 0;
+}
+
+/* Zdrojový panel. Čísla řádků jsou generovaný obsah, takže se nekopírují. */
+#mdv-source {
+  /* Volné místo pod koncem: i poslední řádky jde zarovnat nahoru se synchronizovaným náhledem. */
+  padding: 16px 0 calc(100vh - 4em);
+  color: var(--mdv-source-fg);
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  tab-size: 4;
+}
+
+.src-line {
+  position: relative;
+  min-height: 1.6em;
+  padding: 0 16px 0 56px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.src-line::before {
+  content: attr(data-line);
+  position: absolute;
+  left: 0;
+  width: 40px;
+  text-align: right;
+  color: var(--mdv-source-muted);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.src-heading { color: var(--mdv-source-heading); font-weight: 600; }
+.src-code, .src-fence, .src-indented { color: var(--mdv-source-code); }
+.src-frontmatter, .src-hr, .src-fence { color: var(--mdv-source-muted); }
+.src-quote, .src-list, .src-task { color: var(--mdv-source-accent); }
+.src-strong { font-weight: 600; }
+.src-emphasis { font-style: italic; }
+.src-strike { text-decoration: line-through; }
+.src-link, .src-autolink { color: var(--mdv-source-link); }
+.src-math { color: var(--mdv-source-math); }
+.src-html, .src-emoji { color: var(--mdv-source-html); }
+
+/* Hledání (CSS Custom Highlight API – bez úprav DOM). */
+::highlight(mdv-find) {
+  background-color: var(--mdv-find);
+}
+
+::highlight(mdv-find-current) {
+  background-color: var(--mdv-find-current);
+  color: #000;
+}
+
+#mdv-find-status {
+  position: fixed;
+  top: 8px;
+  right: 20px;
+  z-index: 11;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--mdv-status-bg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  color: var(--mdv-source-fg);
+  font: 12px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+#mdv-find-status[hidden] {
+  display: none;
+}
+
+/* Vzdálené obrázky vypnuté v nastavení. */
+.markdown-body img.mdv-blocked-image {
+  display: inline-block;
+  min-width: 24px;
+  min-height: 24px;
+  outline: 1px dashed var(--mdv-source-muted);
 }
 
 .markdown-body {
@@ -64,22 +204,10 @@ body {
   display: none;
 }
 
-/* Ikony GitHub alerts – octicony jako maska, barvu dědí z .markdown-alert-title. */
-.mdv-octicon {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
+/* Ikony GitHub alerts – inline SVG z rendereru, barvu dědí z .markdown-alert-title. */
+.markdown-body .markdown-alert-title .octicon {
   margin-right: 8px;
-  vertical-align: text-bottom;
-  background-color: currentColor;
-  mask: var(--mdv-icon) no-repeat center / contain;
 }
-
-.mdv-octicon-info { --mdv-icon: url(vendor/octicons/info-16.svg); }
-.mdv-octicon-light-bulb { --mdv-icon: url(vendor/octicons/light-bulb-16.svg); }
-.mdv-octicon-report { --mdv-icon: url(vendor/octicons/report-16.svg); }
-.mdv-octicon-alert { --mdv-icon: url(vendor/octicons/alert-16.svg); }
-.mdv-octicon-stop { --mdv-icon: url(vendor/octicons/stop-16.svg); }
 
 /* Téma highlight.js přidává vlastní padding a pozadí – v <pre> je už má GitHub CSS. */
 .markdown-body pre code.hljs {
@@ -143,4 +271,56 @@ body {
 .markdown-body details.mdv-frontmatter summary {
   cursor: pointer;
   color: var(--fgColor-muted, #59636e);
+}
+
+/* Tisk a PDF: jen náhled, celý obsah (žádný scroll kontejner), bloky se nedělí mezi stránky. */
+@media print {
+  html,
+  body {
+    height: auto;
+    background: #ffffff;
+  }
+
+  #mdv-panes {
+    position: static;
+    display: block;
+  }
+
+  #mdv-source-scroll,
+  #mdv-divider,
+  #mdv-banner,
+  #mdv-find-status {
+    display: none !important;
+  }
+
+  #mdv-scroll {
+    overflow: visible;
+  }
+
+  .markdown-body {
+    max-width: none;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .markdown-body pre,
+  .markdown-body table,
+  .markdown-body blockquote,
+  .markdown-body img,
+  .markdown-body .markdown-alert,
+  .markdown-body .mdv-mermaid,
+  .markdown-body .math-display {
+    break-inside: avoid;
+  }
+
+  /* Nadpis drží s následujícím blokem: app.js je před tiskem obalí do .mdv-print-keep
+     (WebKit nerespektuje break-after: avoid u nadpisů). */
+  .mdv-print-keep {
+    break-inside: avoid;
+  }
+
+  .markdown-body pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
 }

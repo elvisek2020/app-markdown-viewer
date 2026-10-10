@@ -29,7 +29,8 @@ Ověřování UI dělej přes self-testy (`App/Web/SelfTest.swift`, jen Debug), 
   - `MarkdownCore` – `MarkdownRenderer.render(_:options:)` → HTML s `data-sourcepos`, outline, front matter, features; GitHub alerts a kotvy nadpisů jako AST transformace
   - `FileWatch` – `FileWatcher` (FSEvents na rodičovském adresáři + kqueue na inode + stat signatura + pojistný polling; po přesunu pryč a zpět se vrací na původní cestu)
   - `WebAssets` – šablona, `app.css`, `app.js` (reconciliation bloků, kotva scrollu, Mermaid/KaTeX/hljs) a vendorované knihovny
-- `App/` – AppKit + read-only `NSDocument` (`MarkdownDocument`), `DocumentModel` (watcher + render na pozadí), `PreviewController` (WKWebView, isolated world `mdview`, `allowsContentJavaScript = false`), scheme handlery `mdv-asset://` a `mdv-file://`, `LinkOpener`
+- `App/` – AppKit + read-only `NSDocument` (`MarkdownDocument`), `DocumentModel` (watcher + render na pozadí, víc odběratelů), `DocumentWindowController` (osnova ve SwiftUI | náhled, nástrojová lišta), `PreviewController` (+Find, +Export; WKWebView, isolated world `mdview`, `allowsContentJavaScript = false`), scheme handlery `mdv-asset://` a `mdv-file://`, `LinkOpener`, `HTMLExporter`, `Preferences` + okno Nastavení
+- Debug build sdílí bundle ID a předvolby s nainstalovanou aplikací – self-testy nesmí zapisovat do UserDefaults (rámy oken apod.).
 - `CLI/mdv` se kopíruje do `MDView.app/Contents/Resources/bin`
 - Parser je `swiftlang/swift-cmark` pinovaný na přesnou verzi, `Package.resolved` je v gitu.
 

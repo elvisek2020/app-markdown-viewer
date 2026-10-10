@@ -20,6 +20,12 @@ Záznam architektonických rozhodnutí a výsledků spiků. Plné zdůvodnění 
 | D15 | Emoji zkratky jen jako samostatná slova (GitHub API se chová nekonzistentně, `a:b:c` nesmí být 🅱️) | přijato |
 | D16 | Mermaid líně (IntersectionObserver), při chybě poslední platná verze s odznakem | implementováno |
 | D17 | Ikona kreslená skriptem (`scripts/make-icon.swift`), snímky do README přes Debug self-test | přijato |
+| D18 | Zdrojový panel ve stejném WKWebView, zvýraznění řádků ve Swiftu (`SourceHighlighter`) | implementováno |
+| D19 | Scroll sync: monotónní mapa řádek ↔ y z `data-sourcepos` (bez footnotes), synchronizace jen z aktivního panelu, skok na řádek zdroj „připíchne“ | implementováno |
+| D20 | Hledání přes CSS Custom Highlight API, normalizace NFD bez diakritiky s mapou zpět na DOM | implementováno |
+| D21 | Export HTML bez JS (styly, fonty KaTeX a lokální obrázky vložené); PDF a tisk přes `printOperation` + `runModal`, světlé téma, `shouldPrintBackgrounds`, nadpis drží s následujícím blokem | implementováno |
+| D22 | Ikony alertů jako inline SVG (CSS maska se netiskne), stejné jako na GitHubu | implementováno |
+| D23 | Self-test neukládá rámy oken ani rozdělení (Debug build sdílí předvolby s nainstalovanou aplikací) | implementováno |
 | D11 | Build výstupy mimo repo (`~/Library/Caches/MDView`), protože `~/Documents` synchronizuje iCloud a xattr rozbíjejí codesign | přijato |
 
 ## Spiky
@@ -42,3 +48,21 @@ Záznam architektonických rozhodnutí a výsledků spiků. Plné zdůvodnění 
   - Escapované `\$x\$`: GitHub z nich udělá matiku, MDView je respektuje jako escape.
 - **Kotvy nadpisů** se shodují ve všech fixtures.
 - **Chyba nalezená golden testy:** inline matika `$5 …` přeskočila do code spanu. Opraveno, inline matika nesmí přeskočit backtick.
+
+## F3: zdroj, osnova, hledání, export
+
+Integrační self-test ověřuje:
+- hledání, i bez diakritiky
+- export HTML: bez skriptů, s vloženými fonty a obrázky a bez interních URL
+- export PDF: stránkovaný, s poslední stranou
+- skok na nadpis zarovná zdroj na stejný řádek
+- synchronizaci zdroj → náhled
+
+Chyby nalezené při F3:
+- **CRLF:** Swift bere `\r\n` jako jeden grafém. Dělení podle `"\n"` nerozdělilo řádky a front matter se v CRLF souborech nerozpoznal.
+- **Tisk do PDF bez panelu:** callback `runModal` přichází z vlákna na pozadí, takže kontrola MainActor ukončila aplikaci. Oprava: `nonisolated` callback.
+- **requestAnimationFrame:** WebKit ho v zakrytých oknech pozastavuje. Synchronizace proto běží přes microtask.
+- **Footnotes v mapě synchronizace:** definice ze středu zdroje se vykreslují na konci dokumentu a zablokovaly monotónní mapu.
+- **Vzhled:** znovu se nastavoval při každé notifikaci UserDefaults (třeba při uložení rámu okna) a přepisoval dočasný vzhled.
+- **Velikost okna:** `NSHostingController` osnovy zmenšil okno bez uloženého rámu na výšku seznamu. Oprava: `sizingOptions = []`.
+- **Předvolby:** self-test ukládal rámy oken do předvoleb nainstalované aplikace.

@@ -14,19 +14,32 @@ final class DocumentModel {
     private(set) var rendered: RenderedDocument?
     private(set) var fileState: FileState = .present
 
-    /// Volá se s každým novým renderem; při nastavení hned dostane ten poslední.
-    var onRender: ((RenderedDocument) -> Void)? {
+    private var renderObservers: [(RenderedDocument) -> Void] = []
+    private var fileStateObservers: [(FileState) -> Void] = []
+    private var moveObservers: [(URL) -> Void] = []
+
+    /// Odběr renderů (náhled, osnova); nový odběratel hned dostane poslední render.
+    func observeRender(_ observer: @escaping (RenderedDocument) -> Void) {
+        renderObservers.append(observer)
+        if let rendered { observer(rendered) }
+    }
+
+    func observeFileState(_ observer: @escaping (FileState) -> Void) {
+        fileStateObservers.append(observer)
+    }
+
+    func observeMove(_ observer: @escaping (URL) -> Void) {
+        moveObservers.append(observer)
+    }
+
+    var options = Preferences.renderOptions(includeSource: false) {
         didSet {
-            if let rendered { onRender?(rendered) }
+            if options != oldValue { render(lastText) }
         }
     }
 
-    var onFileState: ((FileState) -> Void)?
-    var onMove: ((URL) -> Void)?
-
-    var options = RenderOptions() {
-        didSet { render(lastText) }
-    }
+    /// Text posledního načtení souboru.
+    var text: String { lastText }
 
     private var watcher: FileWatcher?
     private var lastText = ""
@@ -75,14 +88,14 @@ final class DocumentModel {
             setFileState(.deleted)
         case .moved(_, let newURL):
             url = newURL
-            onMove?(newURL)
+            moveObservers.forEach { $0(newURL) }
         }
     }
 
     private func setFileState(_ state: FileState) {
         guard state != fileState else { return }
         fileState = state
-        onFileState?(state)
+        fileStateObservers.forEach { $0(state) }
     }
 
     private func render(_ text: String) {
@@ -95,7 +108,7 @@ final class DocumentModel {
             await MainActor.run {
                 guard generation == self.generation else { return }
                 self.rendered = document
-                self.onRender?(document)
+                self.renderObservers.forEach { $0(document) }
             }
         }
     }

@@ -21,7 +21,7 @@ enum FrontMatterExtractor {
     static func extract(from source: String) -> (frontMatter: FrontMatter?, body: String) {
         guard source.hasPrefix("---") else { return (nil, source) }
 
-        let lines = source.split(separator: "\n", omittingEmptySubsequences: false)
+        let lines = source.markdownLines()
         guard let first = lines.first, isDelimiter(first, allowDots: false) else { return (nil, source) }
 
         var closingIndex: Int?
@@ -31,7 +31,7 @@ enum FrontMatterExtractor {
         }
         guard let closingIndex else { return (nil, source) }
 
-        let yamlLines = lines[1..<closingIndex].map { String($0.hasSuffix("\r") ? $0.dropLast() : $0) }
+        let yamlLines = lines[1..<closingIndex].map(String.init)
         let fields = parseFields(yamlLines)
         guard !fields.isEmpty else { return (nil, source) }
 
@@ -80,6 +80,12 @@ enum FrontMatterExtractor {
 }
 
 extension StringProtocol {
+    /// Řádky jako je vidí cmark: oddělovače LF, CRLF i samotné CR. Swift bere CRLF jako jeden
+    /// znak (grafém), takže prosté `split(separator: "\n")` by CRLF soubory nerozdělilo.
+    func markdownLines() -> [SubSequence] {
+        split(omittingEmptySubsequences: false) { $0 == "\n" || $0 == "\r\n" || $0 == "\r" }
+    }
+
     func trimmingTrailingWhitespace() -> String {
         String(reversed().drop(while: \.isWhitespace).reversed())
     }

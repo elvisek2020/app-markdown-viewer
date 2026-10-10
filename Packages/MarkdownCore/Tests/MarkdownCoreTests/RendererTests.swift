@@ -291,6 +291,12 @@ struct FrontMatterTests {
         #expect(document.html.contains("<hr"))
     }
 
+    @Test func crlfFrontMatter() {
+        let document = MarkdownRenderer.render("---\r\ntitle: x\r\n---\r\n# Nadpis\r\n")
+        #expect(document.frontMatter?.fields == [FrontMatter.Field(key: "title", value: "x")])
+        #expect(document.outline.first?.line == 4)
+    }
+
     @Test func unclosedIsNotFrontMatter() {
         #expect(MarkdownRenderer.render("---\ntitle: x\n\nText").frontMatter == nil)
     }

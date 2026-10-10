@@ -1,5 +1,6 @@
 #if DEBUG
 import AppKit
+import PDFKit
 import WebKit
 
 /// Self-test náhledu bez UI (jen Debug build): po vykreslení dokumentu spustí sondu v reálné
@@ -53,6 +54,12 @@ enum SelfTest {
         }
     }
 
+    /// Self-test běží (report, stavový log nebo snímek). Debug build sdílí bundle ID s nainstalovanou
+    /// aplikací, takže self-test nesmí ukládat rámy oken a rozdělení do jejích předvoleb.
+    static var isActive: Bool {
+        reportPath != nil || statusPath != nil || snapshotPath != nil
+    }
+
     static var snapshotPath: String? {
         UserDefaults.standard.string(forKey: "MDViewSelfTestSnapshot")
     }
@@ -68,12 +75,16 @@ enum SelfTest {
     }
 
     @MainActor private static var phase = 0
+    /// Během kontrol F3 (zdrojový panel přerenderuje dokument) se aktualizace nepočítají jako fáze.
+    @MainActor private static var busy = false
     @MainActor static var report: [String: Any] = [:]
     @MainActor private static let started = Date()
 
     @MainActor
-    static func didUpdate(webView: WKWebView, fileURL: URL, world: WKContentWorld) {
-        guard let reportPath, phase < 3 else { return }
+    static func didUpdate(preview: PreviewController, fileURL: URL) {
+        let webView: WKWebView = preview.webView
+        let world = PreviewController.world
+        guard let reportPath, phase < 3, !busy else { return }
         phase += 1
         let currentPhase = phase
         Task {
@@ -82,7 +93,19 @@ enum SelfTest {
             report["phase\(currentPhase)ElapsedMs"] = Int(Date().timeIntervalSince(started) * 1000)
             if currentPhase == 1 {
                 report["pageWorldSeesMdv"] = await pageWorldSeesMdv(webView: webView)
-                if let snapshotPath { await saveSnapshot(of: webView, to: snapshotPath) }
+                if let snapshotPath {
+                    if UserDefaults.standard.bool(forKey: "MDViewSelfTestSourcePane") {
+                        busy = true
+                        await showSourcePaneForSnapshot(preview)
+                        busy = false
+                    }
+                    await saveSnapshot(of: webView, to: snapshotPath)
+                }
+                if snapshotPath == nil, fileURL.lastPathComponent == "showcase.md" {
+                    busy = true
+                    report["f3"] = await f3Checks(preview: preview, directory: fileURL.deletingLastPathComponent())
+                    busy = false
+                }
                 modify(fileURL) { $0 + "\n\nPřidaný odstavec self-testu.\n" }
             } else if currentPhase == 2 {
                 // Přepnutí vzhledu musí diagramy překreslit (sonda je po fázi 2 označila).
@@ -105,7 +128,7 @@ enum SelfTest {
         }
         // Pojistka, kdyby fáze 2 nepřišla (watcher nezachytil změnu).
         if currentPhase == 1 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 45) {
                 MainActor.assumeIsolated {
                     guard phase < 3 else { return }
                     report["phase\(phase + 1)"] = "timeout – změna souboru se do náhledu nedostala"
@@ -114,6 +137,97 @@ enum SelfTest {
                 }
             }
         }
+    }
+
+    /// F3: hledání, export HTML a PDF, synchronizace zdrojového panelu.
+    @MainActor
+    private static func f3Checks(preview: PreviewController, directory: URL) async -> [String: Any] {
+        var result: [String: Any] = [:]
+        var marks: [String] = []
+        func mark(_ step: String) async {
+            let state = await preview.callString("""
+            const svg = document.querySelector("#mdv-content .mdv-mermaid svg");
+            return `${svg?.__mdvSelfTest === 1 ? "same" : "new"}/${matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"}`;
+            """) ?? "?"
+            marks.append("\(step):\(state)")
+        }
+        await mark("start")
+        result["findPozn"] = await preview.runFind("pozn")
+        result["findWithoutDiacritics"] = await preview.runFind("zlutoucky kun")
+        result["findMissing"] = await preview.runFind("tohle v dokumentu neni")
+        await preview.runFind("")
+
+        let htmlURL = directory.appendingPathComponent("export.html")
+        do {
+            try await preview.exportHTML(to: htmlURL)
+            let html = (try? String(contentsOf: htmlURL, encoding: .utf8)) ?? ""
+            result["html"] = [
+                "bytes": html.utf8.count,
+                "scripts": html.components(separatedBy: "<script").count - 1,
+                "svg": html.contains("<svg"),
+                "katexFonts": html.contains("data:font/woff2"),
+                "inlinedImage": html.contains("src=\"data:image/svg+xml"),
+                "mdvURLs": html.components(separatedBy: "mdv-file://").count - 1 + html.components(separatedBy: "mdv-asset://").count - 1,
+                "sourcepos": html.contains("data-sourcepos"),
+            ]
+        } catch {
+            result["html"] = "chyba: \(error)"
+        }
+
+        await mark("html")
+        let pdfURL = directory.appendingPathComponent("export.pdf")
+        do {
+            try await preview.exportPDF(to: pdfURL)
+            let pdf = PDFDocument(url: pdfURL)
+            let pages = pdf?.pageCount ?? 0
+            result["pdf"] = [
+                "pages": pages,
+                "lastPageHasEnd": pdf?.page(at: max(0, pages - 1))?.string?.contains("Konec dokumentu") ?? false,
+                "hasMermaidText": pdf?.string?.contains("FSEvents") ?? false,
+            ]
+        } catch {
+            result["pdf"] = "chyba: \(error)"
+        }
+
+        await mark("pdf")
+        preview.setSourceVisible(true)
+        var sourceReady = false
+        for _ in 0..<40 {
+            if await preview.callString("return String(document.querySelectorAll('#mdv-source .src-line').length)").flatMap(Int.init) ?? 0 > 0 {
+                sourceReady = true
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        result["sourceReady"] = sourceReady
+        let syncScript = """
+        const lineOf = (text) => parseInt([...document.querySelectorAll("#mdv-content h2")]
+          .find((h) => h.textContent.includes(text)).getAttribute("data-sourcepos"), 10);
+        const wait = () => new Promise((resolve) => setTimeout(resolve, 400));
+        // Náhled → zdroj: skok na nadpis uprostřed dokumentu, horní řádky obou panelů se musí shodovat.
+        const alerts = lineOf("Alerts");
+        mdv.scrollToLine(alerts);
+        await wait();
+        const previewTop = mdv.topLine();
+        const sourceTop = mdv.sourceTopLine();
+        // Zdroj → náhled: scroll zdrojového panelu na řádek tabulky.
+        const table = lineOf("Tabulka");
+        const source = document.getElementById("mdv-source-scroll");
+        source.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+        source.scrollTop = document.querySelector(`#mdv-source [data-line="${table}"]`).offsetTop;
+        await wait();
+        return JSON.stringify({ alerts, previewTop, sourceTop, table, previewAfterSource: mdv.topLine() });
+        """
+        if let json = await preview.callString(syncScript), let data = json.data(using: .utf8),
+           let sync = try? JSONSerialization.jsonObject(with: data) {
+            result["sync"] = sync
+        }
+        await mark("sync")
+        preview.setSourceVisible(false)
+        try? await Task.sleep(for: .milliseconds(500))
+        await mark("end")
+        result["marks"] = marks
+        return result
     }
 
     @MainActor
@@ -142,10 +256,7 @@ enum SelfTest {
           copyTex: !!content.querySelector(".katex") && typeof window.katex === "object",
           hljs: content.querySelectorAll("code.hljs").length,
           alerts: content.querySelectorAll(".markdown-alert").length,
-          alertIconMask: (() => {
-            const icon = content.querySelector(".mdv-octicon");
-            return icon ? getComputedStyle(icon).maskImage : null;
-          })(),
+          alertIcons: content.querySelectorAll(".markdown-alert-title svg.octicon path").length,
           footnotes: !!content.querySelector("section.footnotes"),
           taskItems: content.querySelectorAll(".task-list-item").length,
           frontMatter: !!content.querySelector(".mdv-frontmatter"),
@@ -196,6 +307,27 @@ enum SelfTest {
         guard modified != text else { return false }
         try? modified.write(to: fileURL, atomically: true, encoding: .utf8)
         return true
+    }
+
+    /// Snímek se zdrojovým panelem: širší okno bez osnovy, zdroj vedle náhledu.
+    @MainActor
+    private static func showSourcePaneForSnapshot(_ preview: PreviewController) async {
+        if let split = preview.parent as? NSSplitViewController {
+            split.splitViewItems.first?.isCollapsed = true
+        }
+        if let window = preview.view.window {
+            var frame = window.frame
+            frame.size.width = 1500
+            window.setFrame(frame, display: true)
+        }
+        preview.setSourceVisible(true)
+        for _ in 0..<40 {
+            if await preview.callString("return String(document.querySelectorAll('#mdv-source .src-line').length)").flatMap(Int.init) ?? 0 > 0 {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        try? await Task.sleep(for: .milliseconds(500))
     }
 
     @MainActor

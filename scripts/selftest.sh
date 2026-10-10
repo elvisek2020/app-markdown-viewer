@@ -18,12 +18,12 @@ pkill -f "$APP/Contents/MacOS/MDView" 2>/dev/null || true
 sleep 0.5
 
 open -n -g -a "$APP" "$WORK/$(basename "$SOURCE")" --args -MDViewSelfTestReport "$REPORT" -ApplePersistenceIgnoreState YES ${EXTRA[@]+"${EXTRA[@]}"}
-for _ in $(seq 1 60); do
+for _ in $(seq 1 180); do
     [ -f "$REPORT" ] && break
     sleep 0.5
 done
 if [ ! -f "$REPORT" ]; then
-    echo "Self-test nevytvořil report do 30 s" >&2
+    echo "Self-test nevytvořil report do 90 s" >&2
     exit 1
 fi
 cat "$REPORT"

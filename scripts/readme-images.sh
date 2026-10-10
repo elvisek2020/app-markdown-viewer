@@ -12,4 +12,10 @@ for appearance in light dark; do
         -MDViewSelfTestSnapshot "$WORK/$appearance.png" -MDViewSelfTestAppearance "$appearance" > /dev/null
     swift "$ROOT/scripts/frame-screenshot.swift" "$WORK/$appearance.png" \
         "$ROOT/docs/images/preview-$appearance.png" "demo.md" "$appearance"
+    # Zdrojový panel vedle náhledu.
+    "$ROOT/scripts/selftest.sh" "$ROOT/docs/images/demo.md" \
+        -MDViewSelfTestSnapshot "$WORK/source-$appearance.png" -MDViewSelfTestAppearance "$appearance" \
+        -MDViewSelfTestSourcePane YES > /dev/null
+    swift "$ROOT/scripts/frame-screenshot.swift" "$WORK/source-$appearance.png" \
+        "$ROOT/docs/images/source-$appearance.png" "demo.md" "$appearance"
 done

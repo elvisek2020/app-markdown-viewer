@@ -26,7 +26,7 @@ final class MarkdownDocument: NSDocument {
             DispatchQueue.main.async { self.close() }
             return
         }
-        model.onMove = { [weak self] newURL in
+        model.observeMove { [weak self] newURL in
             self?.fileURL = newURL
         }
         self.model = model

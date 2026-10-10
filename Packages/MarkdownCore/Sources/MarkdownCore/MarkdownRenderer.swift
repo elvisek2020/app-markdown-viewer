@@ -19,19 +19,23 @@ public struct RenderOptions: Sendable, Equatable {
     public var headingAnchors: Bool
     /// Emoji zkratky `:rocket:` → 🚀.
     public var emoji: Bool
+    /// Přidat i zvýrazněný zdroj pro zdrojový panel (`RenderedDocument.sourceHTML`).
+    public var includeSource: Bool
 
     public init(
         frontMatter: FrontMatterMode = .table,
         math: Bool = true,
         alerts: Bool = true,
         headingAnchors: Bool = true,
-        emoji: Bool = true
+        emoji: Bool = true,
+        includeSource: Bool = false
     ) {
         self.frontMatter = frontMatter
         self.math = math
         self.alerts = alerts
         self.headingAnchors = headingAnchors
         self.emoji = emoji
+        self.includeSource = includeSource
     }
 }
 
@@ -62,6 +66,8 @@ public struct RenderedDocument: Sendable, Equatable {
     /// Co dokument obsahuje – podle toho web vrstva líně načte KaTeX, Mermaid nebo highlight.js.
     public let features: DocumentFeatures
     public let wordCount: Int
+    /// Zvýrazněný zdroj (jen s `RenderOptions.includeSource`).
+    public let sourceHTML: String?
 }
 
 /// Markdown → HTML kompatibilní s GitHubem: cmark-gfm (GFM + footnotes) + matika,
@@ -123,7 +129,8 @@ public enum MarkdownRenderer {
             outline: transformer.outline,
             frontMatter: frontMatter,
             features: transformer.features,
-            wordCount: transformer.wordCount
+            wordCount: transformer.wordCount,
+            sourceHTML: options.includeSource ? SourceHighlighter.html(for: withoutBOM) : nil
         )
     }
 }
@@ -253,7 +260,13 @@ enum AlertKind: String, CaseIterable, Sendable {
 
     var title: String { rawValue.prefix(1).uppercased() + rawValue.dropFirst() }
 
-    /// Název octiconu, který kreslí CSS (`mdv-octicon-…`).
+    /// Inline SVG ikona jako na GitHubu; barvu přebírá z titulku (`fill: currentColor`).
+    var iconSVG: String {
+        let path = Octicons.paths[icon] ?? ""
+        return "<svg class=\"octicon octicon-\(icon)\" viewBox=\"0 0 16 16\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path d=\"\(path)\"></path></svg>"
+    }
+
+    /// Název octiconu.
     var icon: String {
         switch self {
         case .note: "info"
@@ -297,7 +310,7 @@ private enum AlertTransformer {
         let alert = makeCustomBlock(
             onEnter: """
             <div class="markdown-alert markdown-alert-\(kind.rawValue)" data-sourcepos="\(blockquote.sourcepos)">\
-            <p class="markdown-alert-title"><span class="mdv-octicon mdv-octicon-\(kind.icon)" aria-hidden="true"></span>\(kind.title)</p>
+            <p class="markdown-alert-title">\(kind.iconSVG)\(kind.title)</p>
             """,
             onExit: "</div>"
         )

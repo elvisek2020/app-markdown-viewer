@@ -3,14 +3,29 @@ import AppKit
 @main
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        UserDefaults.standard.register(defaults: [
-            PreferenceKey.followTail: true,
-            PreferenceKey.pageZoom: 1.0,
-        ])
+        Preferences.registerDefaults()
+        Preferences.applyAppearance()
         MainMenuExtras.install()
+        // Vzhled se mění jen se změnou samotné předvolby – UserDefaults hlásí i automatické
+        // ukládání rámů oken a podobně, a to nesmí přepsat dočasný vzhled (tisk, self-test).
+        Self.appliedAppearance = Preferences.appearance
+        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                guard Preferences.appearance != Self.appliedAppearance else { return }
+                Self.appliedAppearance = Preferences.appearance
+                Preferences.applyAppearance()
+            }
+        }
         #if DEBUG
         SelfTest.configureApplication()
         #endif
+    }
+
+    private static var appliedAppearance = Preferences.Appearance.system
+
+    @objc func showSettings(_ sender: Any?) {
+        SettingsWindowController.shared.showWindow(sender)
+        SettingsWindowController.shared.window?.makeKeyAndOrderFront(sender)
     }
 
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool {
@@ -26,9 +41,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
         true
     }
-}
-
-enum PreferenceKey {
-    static let followTail = "followTail"
-    static let pageZoom = "pageZoom"
 }

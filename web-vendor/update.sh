@@ -33,6 +33,23 @@ for icon in info light-bulb report alert stop; do
 done
 cp "$M/@primer/octicons/LICENSE" "$DEST/octicons/"
 
+# Ikony alertů jako inline SVG v rendereru (CSS maska se netiskne).
+python3 -I - "$DEST/octicons" "$ROOT/Packages/MarkdownCore/Sources/MarkdownCore/Octicons.generated.swift" <<'PY'
+import re, sys
+vendor, out = sys.argv[1], sys.argv[2]
+lines = [
+    "// Vygenerováno z vendorovaných Primer Octicons (MIT) skriptem web-vendor/update.sh – needitovat ručně.",
+    "",
+    "enum Octicons {",
+    "    /// Cesty SVG ikon 16 × 16 podle názvu octiconu.",
+    "    static let paths: [String: String] = [",
+]
+for name in ["info", "light-bulb", "report", "alert", "stop"]:
+    d = re.search(r'<path d="([^"]+)"', open(f"{vendor}/{name}-16.svg").read()).group(1)
+    lines.append(f'        "{name}": "{d}",')
+open(out, "w").write("\n".join(lines + ["    ]", "}", ""]))
+PY
+
 # Emoji zkratky (:rocket:) pro renderer – mapování název → znak z gemoji (stejná data jako GitHub).
 EMOJI="$ROOT/Packages/MarkdownCore/Sources/MarkdownCore/Resources"
 mkdir -p "$EMOJI"

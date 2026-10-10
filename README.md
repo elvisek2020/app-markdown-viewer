@@ -21,8 +21,17 @@
 - **Rendering jako na GitHubu.** Parser cmark-gfm (stejný jako GitHub) a k němu GitHub alerts, Mermaid, matika (KaTeX, `$…$`, `$$…$$`, ```` ```math ````), footnotes, task listy, emoji zkratky, front matter a `<picture>` pro světlý a tmavý režim. Shodu ověřuje 45 golden testů proti GitHub API.
 - **Bezpečnost.** JavaScript z dokumentu nikdy neběží: content JS je vypnutý a skripty aplikace mají vlastní izolovaný svět. Odkazy nic nespouštějí: `.md` se otevře v MDView, web v prohlížeči, ostatní soubory se jen ukážou ve Finderu.
 - **Offline.** Všechny knihovny jsou přibalené, nic se nestahuje z CDN.
-- **Nativní AppKit aplikace.** Taby, Otevřít nedávné, obnova oken včetně pozice, světlý i tmavý režim a zoom.
+- **Zdrojový panel.** Zvýrazněný Markdown s čísly řádků vedle náhledu, se synchronizovaným scrollem oběma směry. Skok na nadpis zarovná oba panely na stejný řádek.
+- **Osnova, hledání a export.** Osnova dokumentu v postranním panelu zvýrazňuje aktuální sekci. Hledání ukazuje počet výsledků a volitelně ignoruje diakritiku. Export do samostatného HTML (bez skriptů, vše vložené) a do PDF, tisk vždy ve světlém tématu se stránkováním, které nerozdělí bloky.
+- **Nativní AppKit aplikace.** Taby, Otevřít nedávné, obnova oken včetně pozice, světlý i tmavý režim, zoom a nastavení.
 - **CLI `mdv`** pro otevírání souborů z terminálu.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/source-dark.png">
+    <img src="docs/images/source-light.png" width="860" alt="Zdrojový panel vedle náhledu">
+  </picture>
+</p>
 
 ## Instalace
 
@@ -49,10 +58,16 @@ claude -p "Navrhni architekturu" | mdv -
 
 | Zkratka | Akce |
 |---|---|
+| ⌥⌘U | Zdrojový panel |
+| ⌃⌘S | Osnova |
+| ⌘F, ⌘G / ⇧⌘G | Hledat, další a předchozí výsledek |
 | ⌘R | Znovu načíst |
 | ⌘+ / ⌘− / ⌘0 | Zoom |
+| ⇧⌘E / ⌥⇧⌘E | Export do HTML / PDF |
+| ⌘P | Tisk |
 | ⌥⌘R | Zobrazit ve Finderu |
 | ⌥⇧⌘C | Kopírovat cestu |
+| ⌘, | Nastavení: vzhled, front matter, matika, emoji, obrázky z internetu, hledání bez diakritiky |
 | Zobrazení → Sledovat konec souboru | Při připisování drží náhled na konci |
 
 ## Vývoj
@@ -60,7 +75,7 @@ claude -p "Navrhni architekturu" | mdv -
 ```bash
 make test                # renderer, golden testy proti GitHubu, watcher (swift test)
 make build               # XcodeGen + Debug build
-scripts/ci-integration.sh  # integrační testy v aplikaci (náhled, bezpečnost, zátěž auto-reloadu)
+scripts/ci-integration.sh  # integrační testy v aplikaci (náhled, bezpečnost, hledání, export, synchronizace, zátěž)
 scripts/gh-golden.sh     # obnoví referenční výstupy GitHubu pro golden testy
 scripts/readme-images.sh # ikona a snímky do README
 make vendor              # aktualizace přibalených knihoven (web-vendor/package.json)

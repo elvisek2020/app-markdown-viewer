@@ -6,20 +6,33 @@ import WebKit
 /// Náhled ve WKWebView. JavaScript dokumentu je vypnutý (`allowsContentJavaScript = false`);
 /// app.js a knihovny běží jako user scripty v izolovaném content worldu „mdview“.
 /// Šablona se načte jednou, další rendery se do ní posílají přes `mdv.update` bez reloadu.
+/// Hledání je v `PreviewController+Find.swift`, export a tisk v `PreviewController+Export.swift`.
 final class PreviewController: NSViewController, ViewerActions, NSMenuItemValidation {
     static let world = WKContentWorld.world(name: "mdview")
 
-    private let model: DocumentModel
-    private var webView: PreviewWebView!
+    let model: DocumentModel
+    private(set) var webView: PreviewWebView!
     private var isReady = false
     private var isUpdating = false
     private var hasContent = false
     private var pending: RenderedDocument?
     private var loadedLibraries: Set<WebAssets.Library> = []
     private var restoreLine: Int?
+    private var lastRemoteImages = Preferences.remoteImages
+
+    /// Zdrojový panel vedle náhledu (stav okna).
+    private(set) var isSourceVisible = Preferences.showSourceByDefault
 
     /// První viditelný řádek zdroje (hlásí app.js při scrollu) – ukládá se pro obnovu okna.
     private(set) var topLine = 1
+
+    /// Volá se při změně `topLine` (zvýraznění v osnově) a viditelnosti zdroje (tlačítko v liště).
+    var onTopLineChange: ((Int) -> Void)?
+    var onSourceVisibilityChange: ((Bool) -> Void)?
+
+    /// Vyhledávací pole v nástrojové liště okna (nastavuje DocumentWindowController).
+    weak var searchField: NSSearchField?
+    var searchItem: NSSearchToolbarItem?
 
     init(model: DocumentModel) {
         self.model = model
@@ -35,6 +48,8 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = false
+        // Tisk a PDF i s pozadím (bloky kódu, záhlaví tabulek, ikony alertů kreslené maskou).
+        configuration.preferences.shouldPrintBackgrounds = true
         configuration.setURLSchemeHandler(AssetSchemeHandler(), forURLScheme: AssetSchemeHandler.scheme)
         configuration.setURLSchemeHandler(LocalFileSchemeHandler(), forURLScheme: LinkPolicy.fileScheme)
 
@@ -53,15 +68,19 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsLinkPreview = false
-        webView.pageZoom = UserDefaults.standard.double(forKey: PreferenceKey.pageZoom)
+        webView.pageZoom = UserDefaults.standard.double(forKey: Preferences.Key.pageZoom)
         #if DEBUG
         webView.isInspectable = true
         #endif
         self.webView = webView
         view = webView
 
-        model.onRender = { [weak self] document in self?.show(document) }
-        model.onFileState = { [weak self] _ in self?.sendStatus() }
+        model.options = Preferences.renderOptions(includeSource: isSourceVisible)
+        model.observeRender { [weak self] document in self?.show(document) }
+        model.observeFileState { [weak self] _ in self?.sendStatus() }
+        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.preferencesChanged() }
+        }
         loadTemplate()
     }
 
@@ -72,6 +91,11 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         } else {
             restoreLine = line
         }
+    }
+
+    /// Skok na řádek zdroje (osnova).
+    func scroll(toLine line: Int) {
+        Task { try? await call("mdv.scrollToLine(line)", ["line": line]) }
     }
 
     // MARK: - Přenos obsahu do webu
@@ -97,17 +121,21 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
             let directory = model.url.deletingLastPathComponent()
             var baseURL = LinkPolicy.previewURL(forFile: directory).absoluteString
             if !baseURL.hasSuffix("/") { baseURL += "/" }
-            let payload: [String: Any] = [
+            var payload: [String: Any] = [
                 "html": document.html,
                 "baseURL": baseURL,
                 "restoreLine": hasContent ? 0 : (restoreLine ?? 0),
+                "remoteImages": Preferences.remoteImages,
             ]
+            if isSourceVisible, let source = document.sourceHTML {
+                payload["sourceHTML"] = source
+            }
             do {
                 try await call("return await mdv.update(payload)", ["payload": payload])
                 hasContent = true
                 restoreLine = nil
                 #if DEBUG
-                SelfTest.didUpdate(webView: webView, fileURL: model.url, world: Self.world)
+                SelfTest.didUpdate(preview: self, fileURL: model.url)
                 SelfTest.recordStatus(webView: webView, world: Self.world)
                 #endif
             } catch {
@@ -131,9 +159,6 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
                 webView.evaluateJavaScript(source, in: nil, in: Self.world) { result in
                     if case .failure(let error) = result {
                         NSLog("MDView: knihovna \(library.rawValue) se nenačetla: \(error)")
-                        #if DEBUG
-                        SelfTest.report["libraryError.\(library)"] = "\(error)"
-                        #endif
                     }
                     continuation.resume(returning: (try? result.get()) != nil)
                 }
@@ -155,9 +180,20 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         }
     }
 
+    private func sendSourceState() {
+        guard isReady else { return }
+        let options: [String: Any] = ["visible": isSourceVisible, "width": Preferences.sourceWidth]
+        Task { try? await call("mdv.setSource(options)", ["options": options]) }
+    }
+
     /// Výsledek JS se zahazuje – `Any` není Sendable a nikde ho nepotřebujeme.
-    private func call(_ body: String, _ arguments: [String: Any]) async throws {
+    func call(_ body: String, _ arguments: [String: Any] = [:]) async throws {
         _ = try await webView.callAsyncJavaScript(body, arguments: arguments, in: nil, contentWorld: Self.world)
+    }
+
+    /// Volání JS, které vrací řetězec (JSON nebo text).
+    func callString(_ body: String, _ arguments: [String: Any] = [:]) async -> String? {
+        try? await webView.callAsyncJavaScript(body, arguments: arguments, in: nil, contentWorld: Self.world) as? String
     }
 
     fileprivate func handleMessage(_ body: [String: Any]) {
@@ -166,7 +202,8 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
             isReady = true
             hasContent = false
             if pending == nil { pending = model.rendered }
-            Task { try? await call("mdv.setFollowTail(value)", ["value": UserDefaults.standard.bool(forKey: PreferenceKey.followTail)]) }
+            Task { try? await call("mdv.setFollowTail(value)", ["value": Preferences.followTail]) }
+            sendSourceState()
             sendStatus()
             flush()
         case "link":
@@ -176,7 +213,12 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         case "scroll":
             if let line = body["line"] as? Int, line != topLine {
                 topLine = line
+                onTopLineChange?(line)
                 view.window?.windowController?.document?.invalidateRestorableState()
+            }
+        case "sourceWidth":
+            if let width = body["value"] as? Double {
+                UserDefaults.standard.set(width, forKey: Preferences.Key.sourceWidth)
             }
         case "error":
             NSLog("MDView JS: \(body["message"] ?? "")")
@@ -185,16 +227,40 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
         }
     }
 
+    private func preferencesChanged() {
+        let options = Preferences.renderOptions(includeSource: isSourceVisible)
+        if options != model.options { model.options = options }
+        if Preferences.remoteImages != lastRemoteImages {
+            lastRemoteImages = Preferences.remoteImages
+            if let rendered = model.rendered { show(rendered) }
+        }
+        guard isReady else { return }
+        Task { try? await call("mdv.setFollowTail(value)", ["value": Preferences.followTail]) }
+    }
+
+    // MARK: - Zdrojový panel
+
+    func setSourceVisible(_ visible: Bool) {
+        guard visible != isSourceVisible else { return }
+        isSourceVisible = visible
+        // Zdroj se renderuje jen se zapnutým panelem – změna voleb spustí nový render.
+        model.options = Preferences.renderOptions(includeSource: visible)
+        sendSourceState()
+        onSourceVisibilityChange?(visible)
+    }
+
     // MARK: - ViewerActions
 
     @objc func reloadDocument(_ sender: Any?) {
         model.reload()
     }
 
+    @objc func toggleSourcePane(_ sender: Any?) {
+        setSourceVisible(!isSourceVisible)
+    }
+
     @objc func toggleFollowTail(_ sender: Any?) {
-        let value = !UserDefaults.standard.bool(forKey: PreferenceKey.followTail)
-        UserDefaults.standard.set(value, forKey: PreferenceKey.followTail)
-        Task { try? await call("mdv.setFollowTail(value)", ["value": value]) }
+        UserDefaults.standard.set(!Preferences.followTail, forKey: Preferences.Key.followTail)
     }
 
     @objc func zoomInPreview(_ sender: Any?) { setZoom(webView.pageZoom + 0.1) }
@@ -213,12 +279,17 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     private func setZoom(_ zoom: Double) {
         let clamped = min(3, max(0.5, (zoom * 10).rounded() / 10))
         webView.pageZoom = clamped
-        UserDefaults.standard.set(clamped, forKey: PreferenceKey.pageZoom)
+        UserDefaults.standard.set(clamped, forKey: Preferences.Key.pageZoom)
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        if menuItem.action == #selector(toggleFollowTail(_:)) {
-            menuItem.state = UserDefaults.standard.bool(forKey: PreferenceKey.followTail) ? .on : .off
+        switch menuItem.action {
+        case #selector(toggleFollowTail(_:)):
+            menuItem.state = Preferences.followTail ? .on : .off
+        case #selector(toggleSourcePane(_:)):
+            menuItem.state = isSourceVisible ? .on : .off
+        default:
+            break
         }
         return true
     }
