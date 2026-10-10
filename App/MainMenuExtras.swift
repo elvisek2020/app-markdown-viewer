@@ -26,6 +26,9 @@ enum MainMenuExtras {
         guard let mainMenu = NSApp.mainMenu else { return }
 
         if let appMenu = mainMenu.items.first?.submenu {
+            // O aplikaci MDView: vlastní panel s autorem (standardní akce by ukázala jen copyright).
+            appMenu.items.first { $0.action == #selector(NSApplication.orderFrontStandardAboutPanel(_:)) }?
+                .action = #selector(AppDelegate.showAbout(_:))
             let settings = item("Nastavení…", #selector(AppDelegate.showSettings(_:)), ",", [.command])
             appMenu.insertItem(.separator(), at: 1)
             appMenu.insertItem(settings, at: 2)

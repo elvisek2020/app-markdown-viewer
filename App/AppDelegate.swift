@@ -29,6 +29,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private static var appliedAppearance = Preferences.Appearance.system
 
+    /// Okno O aplikaci: standardní panel (název, verze, copyright) doplněný o autora a odkaz na repo.
+    @objc func showAbout(_ sender: Any?) {
+        let centered = NSMutableParagraphStyle()
+        centered.alignment = .center
+        let text: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+            .foregroundColor: NSColor.labelColor,
+            .paragraphStyle: centered,
+        ]
+        let credits = NSMutableAttributedString(string: "Autor: ElvisEK\n", attributes: text)
+        var link = text
+        link[.link] = URL(string: "https://github.com/elvisek2020/app-markdown-viewer")
+        credits.append(NSAttributedString(string: "github.com/elvisek2020/app-markdown-viewer", attributes: link))
+        var muted = text
+        muted[.foregroundColor] = NSColor.secondaryLabelColor
+        credits.append(NSAttributedString(
+            string: "\n\nNativní Markdown viewer pro soubory, které zapisuje AI agent.",
+            attributes: muted
+        ))
+        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
+        NSApp.activate()
+    }
+
     @objc func showSettings(_ sender: Any?) {
         SettingsWindowController.shared.showWindow(sender)
         SettingsWindowController.shared.window?.makeKeyAndOrderFront(sender)
