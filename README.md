@@ -45,7 +45,7 @@ Požadavky: macOS 15+, Apple Silicon.
 
 Stáhni **[MDView.dmg](https://github.com/elvisek2020/app-markdown-viewer/releases/latest/download/MDView.dmg)** (poslední vydání, starší jsou v [Releases](https://github.com/elvisek2020/app-markdown-viewer/releases)), otevři ho a přetáhni MDView do složky Aplikace.
 
-Aplikace je podepsaná, ale není notarizovaná. Při prvním spuštění macOS ohlásí, že ji nemůže ověřit. Otevři Nastavení systému → Soukromí a zabezpečení a klikni na Přesto otevřít. Totéž zařídí v Terminálu `xattr -dr com.apple.quarantine /Applications/MDView.app`.
+Aplikace je podepsaná, ale není notarizovaná (notarizace vyžaduje placený Apple Developer Program). Při prvním spuštění proto macOS ohlásí, že ji nemůže ověřit. Otevři Nastavení systému → Soukromí a zabezpečení a klikni na Přesto otevřít. Stačí to jednou. Totéž zařídí v Terminálu `xattr -dr com.apple.quarantine /Applications/MDView.app`.
 
 - Příkaz `mdv`: `ln -sf /Applications/MDView.app/Contents/Resources/bin/mdv /opt/homebrew/bin/mdv`.
 - Quick Look se zaregistruje při prvním spuštění aplikace. Když mezerník ve Finderu náhled MDView neukáže, zapni ho v Nastavení systému → Obecné → Položky při přihlášení a rozšíření → Quick Look.
