@@ -62,6 +62,7 @@ package: release
 	@codesign -dv "$(APP_RELEASE)" 2>&1 | grep -q '^TeamIdentifier=[A-Z0-9]' \
 		|| echo "Pozor: ad-hoc podpis (chybí Config/Local.xcconfig) – macOS bude po každé verzi znovu žádat o oprávnění."
 	ditto -c -k --sequesterRsrc --keepParent "$(APP_RELEASE)" "$(RELEASE_ZIP)"
+	@$(MAKE) --no-print-directory unregister-dev
 	@echo "Balíček: $(RELEASE_ZIP) (verze $(VERSION), $$(du -h "$(RELEASE_ZIP)" | cut -f1))"
 
 # Vydání na GitHubu: tag v<verze> na pushnutém commitu, asset MDView.zip.
