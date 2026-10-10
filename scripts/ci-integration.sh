@@ -71,6 +71,8 @@ w = json.load(open(f"{work}/workspace.json"))
 check("pracovní složka: strom bez node_modules/.git, výchozí README", w.get("fileCount") == 2 and w.get("initial") == "README.md", w)
 check("pracovní složka: sledování přepne na nový soubor agenta",
       w.get("followed") == "agent/vystup.md" and w.get("followedTitle") == "Výstup agenta", w)
+check("pracovní složka: režim úprav pokračuje v dalším souboru, sledování v něm nepřepíná",
+      w.get("editCarriedOver") is True and w.get("followPausedWhileEditing") is True, w)
 
 win = json.load(open(f"{work}/window.json"))
 check("paměť okna: nové okno dostane rám naposledy zavřeného, další dokument jako panel",

@@ -4,6 +4,7 @@ import MarkdownCore
 
 /// Self-test pracovní složky (`scripts/selftest-workspace.sh`): po načtení stromu zapne sledování,
 /// vytvoří ve složce nový soubor (jen v /tmp) a ověří, že se na něj náhled sám přepnul a vykreslil ho.
+/// Pak zapne režim úprav: ten musí pokračovat ve vybraném dalším souboru a sledování v něm nepřepíná.
 enum WorkspaceSelfTest {
     static var reportPath: String? {
         UserDefaults.standard.string(forKey: "MDViewSelfTestWorkspaceReport")
@@ -48,11 +49,31 @@ enum WorkspaceSelfTest {
                 MainActor.assumeIsolated {
                     guard report["followedTitle"] == nil else { return }
                     report["followedTitle"] = document.outline.first?.title ?? ""
-                    finish(reportPath)
+                    checkEditing(controller, reportPath: reportPath)
                 }
             }
         default:
             break
+        }
+    }
+
+    @MainActor
+    private static func checkEditing(_ controller: WorkspaceWindowController, reportPath: String) {
+        let folder = controller.folder
+        guard let preview = controller.preview, folder.path.hasPrefix("/tmp/") || folder.path.hasPrefix("/private/tmp/") else {
+            finish(reportPath)
+            return
+        }
+        preview.beginEditing()
+        controller.select(path: folder.appendingPathComponent("README.md").path)
+        report["editCarriedOver"] = controller.preview !== preview && controller.preview?.isEditing == true
+        // Agent zapíše další soubor – v režimu úprav sledování výběr nepřepne.
+        try? "# Další výstup\n".write(to: folder.appendingPathComponent("agent/dalsi.md"), atomically: true, encoding: .utf8)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            MainActor.assumeIsolated {
+                report["followPausedWhileEditing"] = controller.selectedPath?.hasSuffix("/README.md") == true
+                finish(reportPath)
+            }
         }
     }
 

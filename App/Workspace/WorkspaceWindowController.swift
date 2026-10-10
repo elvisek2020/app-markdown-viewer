@@ -11,7 +11,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
     private let split = NSSplitViewController()
     private let content = NSViewController()
     private var folderWatcher: FolderWatcher?
-    private var preview: PreviewController?
+    private(set) var preview: PreviewController?
     private var model: DocumentModel?
     private var searchItem: NSSearchToolbarItem?
     private var sourceButton: NSButton?
@@ -164,7 +164,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
 
     // MARK: - Výběr a náhled
 
-    private func select(path rawPath: String) {
+    func select(path rawPath: String) {
         let path = URL(fileURLWithPath: rawPath).resolvingSymlinksInPath().path
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), !isDirectory.boolValue else { return }

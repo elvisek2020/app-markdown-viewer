@@ -125,3 +125,4 @@ Poznatky:
 - **`saveDocument:`:** Swiftí `NSDocument.save(_:)` je v Objective-C `saveDocument:`. Akce náhledu se proto musí jmenovat `saveDocument(_:)`, jinak ji položka Uložit mine.
 - **Skupiny Zpět v self-testu:** NSUndoManager zavírá automatickou skupinu až po zpracování události. Self-test žádné události nemá, takže po každém psaní pošle prázdnou `applicationDefined` událost. Ruční `endUndoGrouping` vyhodí výjimku.
 - **Ověření:** `scripts/selftest-edit.sh` (v CI) projde psaní, automatické uložení bez reloadu, tiché načtení změny od agenta, oba konflikty, porovnání, ⌘S, položky menu, Zpět a synchronizaci posunu.
+  `scripts/selftest-workspace.sh` ověří, že režim úprav pokračuje v dalším souboru a sledování v něm nepřepíná.
