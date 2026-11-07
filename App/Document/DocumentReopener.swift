@@ -17,6 +17,20 @@ enum DocumentReopener {
     /// Volá `ViewerDocumentController` u dokumentů, které neotevřel tenhle typ.
     static func noteExplicitOpen(_ document: NSDocument) {
         explicitDocument = document
+        // Dorazil až po znovuotevření – pořadí oken může ještě změnit pozdě zobrazené okno složky.
+        if didReopen, pending == 0 { bringExplicitToFront() }
+    }
+
+    /// Vybere panel se souborem z Finderu a dá jeho okno dopředu – až v dalším průchodu run loopu,
+    /// kdy jsou všechna znovuotevřená okna zobrazená (okno složky se může ukázat později).
+    private static func bringExplicitToFront() {
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                guard let document = explicitDocument, let window = document.windowControllers.first?.window else { return }
+                window.tabGroup?.selectedWindow = window
+                document.showWindows()
+            }
+        }
     }
 
     /// Klíč seznamu v předvolbách. Self-testy sdílejí předvolby s nainstalovanou aplikací,
@@ -55,7 +69,7 @@ enum DocumentReopener {
             NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, _ in
                 pending -= 1
                 // Soubor z Finderu se otevřel dřív a znovuotevřené okna/panely ho překryly.
-                if pending == 0 { explicitDocument?.showWindows() }
+                if pending == 0 { bringExplicitToFront() }
             }
             isOpeningOwn = false
         }
