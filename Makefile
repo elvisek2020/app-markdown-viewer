@@ -39,6 +39,7 @@ install: release
 	@if [ -d "$(INSTALL_DIR)/MDView.app" ]; then \
 		/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$(INSTALL_DIR)/MDView.app/Contents/Info.plist" | grep -qx cz.elvisek.mdview \
 			|| { echo "$(INSTALL_DIR)/MDView.app není MDView od cz.elvisek – nepřepisuji"; exit 1; }; \
+		pluginkit -r "$(INSTALL_DIR)/MDView.app/$(QL_APPEX)" 2>/dev/null; \
 		rm -rf "$(INSTALL_DIR)/MDView.app"; \
 	fi
 	ditto "$(APP_RELEASE)" "$(INSTALL_DIR)/MDView.app"

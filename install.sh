@@ -35,6 +35,8 @@ ditto -x -k "$WORK/MDView.zip" "$WORK"
 [ -d "$WORK/MDView.app" ] || { echo "Balíček neobsahuje MDView.app." >&2; exit 1; }
 codesign --verify --deep --strict "$WORK/MDView.app" || { echo "Podpis aplikace nesedí – neinstaluji." >&2; exit 1; }
 
+# Staré rozšíření odregistrovat před výměnou – jinak zůstane v pluginkitu dvakrát (stejná cesta, jiné UUID).
+[ -d "$APP" ] && pluginkit -r "$APP/Contents/PlugIns/MDViewQuickLook.appex" 2>/dev/null || true
 rm -rf "$APP"
 ditto "$WORK/MDView.app" "$APP"
 # Aplikace není notarizovaná. Stažení přes curl karanténu nenastavuje; kdyby ji něco přidalo,

@@ -191,6 +191,8 @@ final class UpdateController: NSObject, NSMenuItemValidation {
         sleep 0.1
     done
     ditto "$NEW" "$TARGET.mdview-new" || { rm -rf "$TARGET.mdview-new" "$WORK"; exit 1; }
+    # Staré rozšíření odregistrovat – jinak zůstane v pluginkitu dvakrát (stejná cesta, jiné UUID).
+    [ "$RELAUNCH" = 1 ] && pluginkit -r "$TARGET/Contents/PlugIns/MDViewQuickLook.appex" 2>/dev/null
     if [ -e "$TARGET" ]; then mv "$TARGET" "$TARGET.mdview-old" || { rm -rf "$TARGET.mdview-new" "$WORK"; exit 1; }; fi
     if ! mv "$TARGET.mdview-new" "$TARGET"; then
         mv "$TARGET.mdview-old" "$TARGET"
