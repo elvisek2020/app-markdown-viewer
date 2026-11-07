@@ -67,15 +67,16 @@ struct SettingsView: View {
             }
             Section {
                 LabeledContent("MDView") {
-                    HStack {
-                        Text("Verze \(AppDelegate.version)")
-                            .foregroundStyle(.secondary)
-                        Button("Zkontrolovat aktualizace…") {
-                            UpdateController.shared.checkForUpdates(nil)
-                        }
+                    Text("Verze \(AppDelegate.version)")
+                        .foregroundStyle(.secondary)
+                }
+                Toggle("Automaticky kontrolovat aktualizace", isOn: $autoCheckUpdates)
+                HStack {
+                    Spacer()
+                    Button("Zkontrolovat aktualizace…") {
+                        UpdateController.shared.checkForUpdates(nil)
                     }
                 }
-                Toggle("Automaticky kontrolovat aktualizace (jednou denně, GitHub)", isOn: $autoCheckUpdates)
             }
         }
         .formStyle(.grouped)
