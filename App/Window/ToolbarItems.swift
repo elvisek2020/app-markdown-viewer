@@ -7,6 +7,7 @@ enum ToolbarItems {
     static let search = NSToolbarItem.Identifier("cz.elvisek.mdview.search")
     static let follow = NSToolbarItem.Identifier("cz.elvisek.mdview.follow")
     static let appearance = NSToolbarItem.Identifier("cz.elvisek.mdview.appearance")
+    static let settings = NSToolbarItem.Identifier("cz.elvisek.mdview.settings")
 
     /// Název pro uložení rámu okna (`NSWindow Frame <název>`); self-test ukládá pod vlastním klíčem,
     /// nebo vůbec – Debug build sdílí předvolby s nainstalovanou aplikací.
@@ -36,6 +37,17 @@ enum ToolbarItems {
         item.label = label
         item.toolTip = toolTip
         return (item, button)
+    }
+
+    /// Ozubené kolečko – okno Nastavení (akce jde responder chainem až do AppDelegate).
+    static func settingsItem() -> NSToolbarItem {
+        let item = NSToolbarItem(itemIdentifier: settings)
+        item.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "Nastavení")
+        item.label = "Nastavení"
+        item.toolTip = "Nastavení (⌘,)"
+        item.action = #selector(AppDelegate.showSettings(_:))
+        item.isBordered = true
+        return item
     }
 
     static func searchItem() -> NSSearchToolbarItem {

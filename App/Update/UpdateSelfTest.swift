@@ -32,6 +32,7 @@ enum UpdateSelfTest {
             // MDView → O aplikaci, hned pod ním Zkontrolovat aktualizace…
             let appMenu = NSApp.mainMenu?.items.first?.submenu
             report["menuItem"] = appMenu?.items.dropFirst().first?.action == #selector(UpdateController.checkForUpdates(_:))
+            report["appMenu"] = appMenu?.items.map { $0.isSeparatorItem ? "—" : $0.title } ?? []
             if let path = UserDefaults.standard.string(forKey: "MDViewSelfTestSettingsSnapshot") {
                 await snapshotSettings(to: path)
             }

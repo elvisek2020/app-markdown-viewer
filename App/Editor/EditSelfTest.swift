@@ -53,6 +53,9 @@ enum EditSelfTest {
                 return [modeControl.isSelected(forSegment: 0), modeControl.isSelected(forSegment: 1)]
             }
             report["switchShowsEdit"] = segments() == [false, true]
+            let settingsItem = window.toolbar?.items.first { $0.itemIdentifier == ToolbarItems.settings }
+            report["settingsButton"] = settingsItem?.action == #selector(AppDelegate.showSettings(_:))
+                && NSApp.target(forAction: #selector(AppDelegate.showSettings(_:)), to: nil, from: settingsItem) is AppDelegate
             report["editTint"] = window.titlebarAppearsTransparent
 
             // 2. Synchronizace posunu editor → náhled a náhled → editor

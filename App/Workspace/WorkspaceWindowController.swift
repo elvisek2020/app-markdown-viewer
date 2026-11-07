@@ -241,7 +241,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, ToolbarItems.follow, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.mode, ToolbarItems.search]
+        [.toggleSidebar, ToolbarItems.follow, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.settings, ToolbarItems.mode, ToolbarItems.search]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -264,6 +264,8 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
             return item
         case ToolbarItems.mode:
             return paneSwitch.item
+        case ToolbarItems.settings:
+            return ToolbarItems.settingsItem()
         case ToolbarItems.appearance:
             return AppearanceController.shared.makeToolbarItem(itemIdentifier)
         case ToolbarItems.search:
