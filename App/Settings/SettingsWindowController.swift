@@ -76,6 +76,7 @@ struct SettingsView: View {
                     Button("Zkontrolovat aktualizace…") {
                         UpdateController.shared.checkForUpdates(nil)
                     }
+                    Spacer()
                 }
             }
         }
