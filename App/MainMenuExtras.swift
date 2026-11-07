@@ -30,9 +30,12 @@ enum MainMenuExtras {
             // O aplikaci MDView: vlastní panel s autorem (standardní akce by ukázala jen copyright).
             appMenu.items.first { $0.action == #selector(NSApplication.orderFrontStandardAboutPanel(_:)) }?
                 .action = #selector(AppDelegate.showAbout(_:))
+            let updates = item("Zkontrolovat aktualizace…", #selector(UpdateController.checkForUpdates(_:)), "", [])
+            updates.target = UpdateController.shared
             let settings = item("Nastavení…", #selector(AppDelegate.showSettings(_:)), ",", [.command])
-            appMenu.insertItem(.separator(), at: 1)
-            appMenu.insertItem(settings, at: 2)
+            appMenu.insertItem(updates, at: 1)
+            appMenu.insertItem(.separator(), at: 2)
+            appMenu.insertItem(settings, at: 3)
         }
 
         if let file = submenu(in: mainMenu, containing: #selector(NSDocumentController.openDocument(_:))) {

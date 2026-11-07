@@ -28,6 +28,7 @@
 - **Osnova, hledání a export.** Osnova dokumentu v postranním panelu zvýrazňuje aktuální sekci. Hledání ukazuje počet výsledků a volitelně ignoruje diakritiku. Export do samostatného HTML (bez skriptů, vše vložené) a do PDF, tisk vždy ve světlém tématu se stránkováním, které nerozdělí bloky.
 - **Nativní AppKit aplikace.** Při spuštění znovu otevře posledních 10 souborů a složek otevřených při ukončení (počet 5, 10, 20 nebo 30, případně vypnutí, je v Nastavení). Taby, Otevřít nedávné, obnova oken včetně pozice, světlý i tmavý režim s přepínačem v liště, lupa pro každý dokument zvlášť a nastavení. Nové okno se otevře tam, kde bylo naposledy zavřené.
 - **Quick Look.** Mezerník ve Finderu ukáže náhled se stejným vykreslením jako aplikace. Běží v sandboxu, bez sítě a bez Mermaidu (diagram zůstane jako kód). 100KB dokument zobrazí zhruba za 0,35 s.
+- **Aktualizace v aplikaci.** MDView → Zkontrolovat aktualizace… (nebo tlačítko v Nastavení u verze) najde nové vydání na GitHubu, ověří jeho podpis, aplikaci vymění a znovu spustí. Jednou denně to umí zkontrolovat i samo (vypnout jde v Nastavení).
 - **CLI `mdv`** pro otevírání souborů z terminálu.
 
 <p align="center">
@@ -57,6 +58,8 @@ curl -fsSL https://raw.githubusercontent.com/elvisek2020/app-markdown-viewer/mai
 ```
 
 Skript stáhne poslední vydání a nainstaluje `MDView.app` do `/Applications`. Příkaz `mdv` nalinkuje do `/opt/homebrew/bin` (nebo `/usr/local/bin`) a zaregistruje Quick Look. Ověření v Nastavení systému odpadá, protože curl soubor neoznačí jako stažený z internetu. Stejným příkazem se aplikace aktualizuje. Konkrétní verzi nainstaluješ přes `MDV_VERSION=20261010.1754`.
+
+Aktualizace: MDView → Zkontrolovat aktualizace…, nebo znovu příkaz výše.
 
 Odinstalace: `rm -rf /Applications/MDView.app "$(which mdv)"`.
 

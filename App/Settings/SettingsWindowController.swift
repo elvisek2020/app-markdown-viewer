@@ -32,6 +32,7 @@ struct SettingsView: View {
     @AppStorage(Preferences.Key.highlightChanges) private var highlightChanges = true
     @AppStorage(Preferences.Key.reopenDocuments) private var reopenDocuments = true
     @AppStorage(Preferences.Key.reopenLimit) private var reopenLimit = 10
+    @AppStorage(Preferences.Key.autoCheckUpdates) private var autoCheckUpdates = true
 
     var body: some View {
         Form {
@@ -65,8 +66,16 @@ struct SettingsView: View {
                 Toggle("Hledat bez ohledu na diakritiku", isOn: $ignoreDiacritics)
             }
             Section {
-                LabeledContent("MDView", value: "Verze \(AppDelegate.version)")
-                    .foregroundStyle(.secondary)
+                LabeledContent("MDView") {
+                    HStack {
+                        Text("Verze \(AppDelegate.version)")
+                            .foregroundStyle(.secondary)
+                        Button("Zkontrolovat aktualizace…") {
+                            UpdateController.shared.checkForUpdates(nil)
+                        }
+                    }
+                }
+                Toggle("Automaticky kontrolovat aktualizace (jednou denně, GitHub)", isOn: $autoCheckUpdates)
             }
         }
         .formStyle(.grouped)

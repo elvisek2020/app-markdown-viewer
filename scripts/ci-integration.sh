@@ -23,6 +23,8 @@ echo "== Paměť okna"
 "$ROOT/scripts/selftest-window.sh" > "$WORK/window.json"
 echo "== Režim úprav"
 "$ROOT/scripts/selftest-edit.sh" > "$WORK/edit.json"
+echo "== Aktualizace"
+"$ROOT/scripts/selftest-update.sh" > "$WORK/update.json"
 echo "== Znovuotevření"
 "$ROOT/scripts/selftest-reopen.sh" > "$WORK/reopen.json"
 
@@ -101,9 +103,17 @@ check("úpravy: přepínač Zdroj | Upravit (rovnou mezi režimy, vypnutí), zab
       and e.get("clickEditWhileSource") and e.get("clickEditOff"), e)
 
 ro = json.load(open(f"{work}/reopen.json"))
+r2, r3 = ro.get("phase2", {}), ro.get("phase3", {})
 check("znovuotevření: po dalším spuštění poslední dva ze tří (limit 2), bez panelu Otevřít",
-      len(ro.get("reopened", [])) == 2 and set(ro["reopened"]) <= {"poznamky.md", "plan.md", "slozka"}
-      and ro.get("openPanelShown") is False, ro)
+      len(r2.get("reopened", [])) == 2 and set(r2["reopened"]) <= {"poznamky.md", "plan.md", "slozka"}
+      and r2.get("openPanelShown") is False, r2)
+check("znovuotevření: soubor otevřený z Finderu zůstane vpředu",
+      len(r3.get("reopened", [])) == 3 and "novy.md" in r3["reopened"] and r3.get("front") == "novy.md", r3)
+
+u = json.load(open(f"{work}/update.json"))
+check("aktualizace: položka v menu, nová verze, ověřený podpis, podvrh odmítnut",
+      u.get("menuItem") is True and u.get("newer") is True and u.get("verified") is True and u.get("tamperedRejected") is True, u)
+check("aktualizace: po ukončení aplikace skript vymění aplikaci", u.get("replaced") is True and u.get("bundle") == "cz.elvisek.mdview", u)
 
 s = json.load(open(f"{work}/security.json"))["phase1"]
 check("security.md: žádné skripty, iframy, formuláře",

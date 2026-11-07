@@ -39,6 +39,8 @@ targets:
         product: FileWatch
       - package: MarkdownCore
         product: WebAssets
+      - package: MarkdownCore
+        product: Updates
       - target: MDViewQuickLook
   MDViewQuickLook:
     type: app-extension

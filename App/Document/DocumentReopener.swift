@@ -8,6 +8,16 @@ enum DocumentReopener {
     /// Znovuotevření proběhne jednou za spuštění: při startu bez souborů (místo panelu Otevřít),
     /// jinak po dokončení spuštění (soubory z `mdv` nebo Finderu se otevřou navíc).
     private static var didReopen = false
+    private static var pending = 0
+    /// Právě běží vlastní `openDocument` znovuotevření (ne Finder, `mdv` ani Otevřít…).
+    private(set) static var isOpeningOwn = false
+    /// Soubor otevřený z Finderu nebo `mdv` při spuštění – po znovuotevření ostatních má zůstat vpředu.
+    private static weak var explicitDocument: NSDocument?
+
+    /// Volá `ViewerDocumentController` u dokumentů, které neotevřel tenhle typ.
+    static func noteExplicitOpen(_ document: NSDocument) {
+        explicitDocument = document
+    }
 
     /// Klíč seznamu v předvolbách. Self-testy sdílejí předvolby s nainstalovanou aplikací,
     /// proto seznam nečtou ani nezapisují (kromě testu znovuotevření s vlastním klíčem).
@@ -39,8 +49,15 @@ enum DocumentReopener {
             .suffix(Preferences.reopenLimit)
             .map { URL(fileURLWithPath: $0) }
         guard !urls.isEmpty else { return false }
+        pending = urls.count
         for url in urls {
-            NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, _ in }
+            isOpeningOwn = true
+            NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, _ in
+                pending -= 1
+                // Soubor z Finderu se otevřel dřív a znovuotevřené okna/panely ho překryly.
+                if pending == 0 { explicitDocument?.showWindows() }
+            }
+            isOpeningOwn = false
         }
         return true
     }

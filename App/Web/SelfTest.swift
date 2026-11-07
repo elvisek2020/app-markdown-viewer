@@ -59,7 +59,7 @@ enum SelfTest {
     static var isActive: Bool {
         reportPath != nil || statusPath != nil || snapshotPath != nil || WorkspaceSelfTest.reportPath != nil
             || UserDefaults.standard.string(forKey: "MDViewSelfTestIconPath") != nil
-            || WindowFrameSelfTest.isActive || EditSelfTest.reportPath != nil || ReopenSelfTest.isActive
+            || WindowFrameSelfTest.isActive || EditSelfTest.reportPath != nil || ReopenSelfTest.isActive || UpdateSelfTest.isActive
     }
 
     static var snapshotPath: String? {

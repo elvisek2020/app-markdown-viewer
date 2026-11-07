@@ -78,4 +78,18 @@ final class ViewerDocumentController: NSDocumentController {
         openPanel.message = "Vyber Markdown soubor, nebo složku jako pracovní prostor."
         super.beginOpenPanel(openPanel, forTypes: inTypes, completionHandler: completionHandler)
     }
+
+    /// Dokumenty otevřené z Finderu, `mdv` nebo Otevřít… si pamatuje `DocumentReopener`,
+    /// aby po znovuotevření posledních souborů zůstaly vpředu.
+    override func openDocument(
+        withContentsOf url: URL,
+        display displayDocument: Bool,
+        completionHandler: @escaping (NSDocument?, Bool, (any Error)?) -> Void
+    ) {
+        let isReopen = DocumentReopener.isOpeningOwn
+        super.openDocument(withContentsOf: url, display: displayDocument) { document, alreadyOpen, error in
+            if !isReopen, let document { DocumentReopener.noteExplicitOpen(document) }
+            completionHandler(document, alreadyOpen, error)
+        }
+    }
 }

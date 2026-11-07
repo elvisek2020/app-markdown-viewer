@@ -20,6 +20,9 @@ enum Preferences {
         static let reopenDocuments = "reopenLastDocuments"
         static let lastDocuments = "lastOpenDocuments"
         static let reopenLimit = "reopenLimit"
+        static let autoCheckUpdates = "autoCheckUpdates"
+        static let lastUpdateCheck = "lastUpdateCheck"
+        static let skippedUpdateVersion = "skippedUpdateVersion"
     }
 
     enum Appearance: String, CaseIterable {
@@ -42,6 +45,7 @@ enum Preferences {
             Key.highlightChanges: true,
             Key.reopenDocuments: true,
             Key.reopenLimit: 10,
+            Key.autoCheckUpdates: true,
         ])
     }
 
@@ -68,6 +72,9 @@ enum Preferences {
     /// Kolik naposledy otevřených souborů se při spuštění otevře (Nastavení: 5, 10, 20, 30).
     static let reopenLimits = [5, 10, 20, 30]
     static var reopenLimit: Int { max(1, defaults.integer(forKey: Key.reopenLimit)) }
+    static var autoCheckUpdates: Bool { defaults.bool(forKey: Key.autoCheckUpdates) }
+    static var lastUpdateCheck: Date? { defaults.object(forKey: Key.lastUpdateCheck) as? Date }
+    static var skippedUpdateVersion: String? { defaults.string(forKey: Key.skippedUpdateVersion) }
 
     /// Lupa je per dokument (podle cesty); dokument bez záznamu má 100 %.
     static func zoom(for url: URL) -> Double {

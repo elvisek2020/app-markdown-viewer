@@ -23,11 +23,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         DocumentReopener.reopen()
+        UpdateController.shared.checkAutomatically()
         #if DEBUG
         SelfTest.configureApplication()
         WindowFrameSelfTest.run()
         EditSelfTest.run()
         ReopenSelfTest.run()
+        UpdateSelfTest.run()
         #endif
     }
 
