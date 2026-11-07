@@ -77,7 +77,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.mode, ToolbarItems.search, ToolbarItems.settings]
+        [.toggleSidebar, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.mode, ToolbarItems.settings, ToolbarItems.search]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
