@@ -18,6 +18,12 @@ import Testing
         #expect(document.html.components(separatedBy: "<pre").count == 3)
     }
 
+    @Test func longRunIsSplitWithoutVisibleGap() {
+        let html = PlainText.render((1...101).map(String.init).joined(separator: "\n")).html
+        #expect(html.contains("<pre class=\"mdv-plain mdv-plain-continued\" data-sourcepos=\"1:1-100:3\">"))
+        #expect(html.contains("<pre class=\"mdv-plain\" data-sourcepos=\"101:1-101:3\">"))
+    }
+
     @Test func sourcePaneHasNoMarkdownHighlighting() {
         let html = PlainText.render("# x\n", options: RenderOptions(includeSource: true)).sourceHTML ?? ""
         #expect(html == "<div class=\"src-line\" data-line=\"1\"># x</div>")
@@ -37,6 +43,7 @@ import Testing
 
     @Test func extensionsAreCaseInsensitive() {
         #expect(PlainText.isPlainText(URL(fileURLWithPath: "/tmp/A.TXT")))
+        #expect(PlainText.isPlainText(URL(fileURLWithPath: "/tmp/server.log")))
         #expect(!PlainText.isPlainText(URL(fileURLWithPath: "/tmp/a.md")))
     }
 }

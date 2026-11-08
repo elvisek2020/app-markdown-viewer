@@ -61,6 +61,7 @@
 			<array>
 				<string>txt</string>
 				<string>text</string>
+				<string>log</string>
 			</array>
 			<key>NSDocumentClass</key>
 			<string>$(PRODUCT_MODULE_NAME).MarkdownDocument</string>

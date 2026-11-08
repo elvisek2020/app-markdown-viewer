@@ -1,8 +1,11 @@
 import Foundation
 
-/// Prosté textové soubory (.txt): zobrazují se doslova, bez interpretace Markdownu.
+/// Prosté textové soubory (.txt, .log): zobrazují se doslova, bez interpretace Markdownu.
 public enum PlainText {
-    public static let extensions: Set<String> = ["txt", "text"]
+    public static let extensions: Set<String> = ["txt", "text", "log"]
+    /// Log často nemá prázdné řádky; delší souvislý text se dělí, aby se při připsání na konec
+    /// nepřekreslovalo všechno a synchronizace se zdrojem měla po čem jít.
+    private static let maxBlockLines = 100
 
     public static func isPlainText(_ url: URL) -> Bool {
         extensions.contains(url.pathExtension.lowercased())
@@ -29,16 +32,18 @@ public enum PlainText {
         var block: [String] = []
         var firstLine = 1
 
-        func flush() {
+        func flush(continued: Bool = false) {
             guard let last = block.last else { return }
+            let classes = continued ? "mdv-plain mdv-plain-continued" : "mdv-plain"
             let sourcepos = "\(firstLine):1-\(firstLine + block.count - 1):\(max(last.utf8.count, 1))"
-            html += "<pre class=\"mdv-plain\" data-sourcepos=\"\(sourcepos)\">\(block.map(HTMLEscaping.escape).joined(separator: "\n"))</pre>\n"
+            html += "<pre class=\"\(classes)\" data-sourcepos=\"\(sourcepos)\">\(block.map(HTMLEscaping.escape).joined(separator: "\n"))</pre>\n"
             block = []
         }
         for (index, line) in lines.enumerated() {
             if line.allSatisfy(\.isWhitespace) {
                 flush()
             } else {
+                if block.count == maxBlockLines { flush(continued: true) }
                 if block.isEmpty { firstLine = index + 1 }
                 block.append(line)
             }

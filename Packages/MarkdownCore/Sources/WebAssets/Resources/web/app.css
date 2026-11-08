@@ -364,3 +364,7 @@ body.mdv-with-source #mdv-divider:hover {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.markdown-body pre.mdv-plain-continued {
+  margin-bottom: 0;
+}
