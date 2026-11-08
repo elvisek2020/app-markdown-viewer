@@ -75,7 +75,7 @@ final class WorkspaceDocument: NSDocument {
 final class ViewerDocumentController: NSDocumentController {
     override func beginOpenPanel(_ openPanel: NSOpenPanel, forTypes inTypes: [String]?, completionHandler: @escaping (Int) -> Void) {
         openPanel.canChooseDirectories = true
-        openPanel.message = "Vyber Markdown soubor, nebo složku jako pracovní prostor."
+        openPanel.message = "Vyber Markdown nebo textový soubor, nebo složku jako pracovní prostor."
         super.beginOpenPanel(openPanel, forTypes: inTypes, completionHandler: completionHandler)
     }
 

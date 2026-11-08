@@ -353,3 +353,14 @@ body.mdv-with-source #mdv-divider:hover {
     overflow-wrap: anywhere;
   }
 }
+
+/* Prostý text (.txt): doslova, bez rámečku bloku kódu. */
+.markdown-body pre.mdv-plain {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

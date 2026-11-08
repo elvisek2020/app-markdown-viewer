@@ -52,6 +52,21 @@
 		</dict>
 		<dict>
 			<key>CFBundleTypeName</key>
+			<string>Textový dokument</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>txt</string>
+				<string>text</string>
+			</array>
+			<key>NSDocumentClass</key>
+			<string>$(PRODUCT_MODULE_NAME).MarkdownDocument</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
 			<string>Pracovní složka</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
@@ -86,6 +101,8 @@
 					<string>mkd</string>
 					<string>mkdn</string>
 					<string>mdwn</string>
+					<string>mdtxt</string>
+					<string>mdtext</string>
 				</array>
 				<key>public.mime-type</key>
 				<array>

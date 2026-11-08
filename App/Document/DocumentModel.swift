@@ -23,6 +23,8 @@ final class DocumentModel {
     private(set) var rendered: RenderedDocument?
     private(set) var renderReason = RenderReason.file
     private(set) var fileState: FileState = .present
+    /// Kódování textového souboru – úpravy se ukládají stejným (Markdown je vždy UTF-8).
+    private var encoding = String.Encoding.utf8
 
     private var renderObservers: [(RenderedDocument) -> Void] = []
     private var fileStateObservers: [(FileState) -> Void] = []
@@ -91,8 +93,9 @@ final class DocumentModel {
         }
         let snapshot = try watcher.start()
         self.watcher = watcher
-        sync = EditSync(text: snapshot.text)
-        render(snapshot.text, reason: .file)
+        let text = decode(snapshot.data)
+        sync = EditSync(text: text)
+        render(text, reason: .file)
     }
 
     func stop() {
@@ -112,7 +115,7 @@ final class DocumentModel {
             watcher?.checkNow()
             return
         }
-        let text = String(decoding: data, as: UTF8.self)
+        let text = decode(data)
         if sync.isEditing {
             diskDidChange(text)
         } else {
@@ -125,13 +128,20 @@ final class DocumentModel {
         switch event {
         case .updated(let snapshot):
             setFileState(.present)
-            diskDidChange(snapshot.text)
+            diskDidChange(decode(snapshot.data))
         case .deleted:
             setFileState(.deleted)
         case .moved(_, let newURL):
             url = newURL
             moveObservers.forEach { $0(newURL) }
         }
+    }
+
+    private func decode(_ data: Data) -> String {
+        guard PlainText.isPlainText(url) else { return String(decoding: data, as: UTF8.self) }
+        let (text, encoding) = PlainText.decode(data)
+        self.encoding = encoding
+        return text
     }
 
     private func setFileState(_ state: FileState) {
@@ -160,8 +170,11 @@ final class DocumentModel {
         generation += 1
         let generation = generation
         let options = options
+        let isPlainText = PlainText.isPlainText(url)
         Task.detached(priority: .userInitiated) {
-            let document = MarkdownRenderer.render(text, options: options)
+            let document = isPlainText
+                ? PlainText.render(text, options: options)
+                : MarkdownRenderer.render(text, options: options)
             await MainActor.run {
                 guard generation == self.generation else { return }
                 self.rendered = document
@@ -231,12 +244,17 @@ final class DocumentModel {
         guard sync.pendingSave != nil else { return !sync.hasConflict }
         if fileState == .deleted, !force { return false }
         if let data = try? Data(contentsOf: url) {
-            diskDidChange(String(decoding: data, as: UTF8.self))
+            diskDidChange(decode(data))
         }
         guard let text = sync.pendingSave else { return !sync.hasConflict }
         do {
             // Atomicky (dočasný soubor + přejmenování) a přes symlink na skutečný soubor.
-            try Data(text.utf8).write(to: url.resolvingSymlinksInPath(), options: .atomic)
+            guard let encoded = text.data(using: encoding) else {
+                saveError = "Text obsahuje znaky, které kódování souboru neumí uložit."
+                notifyEditState()
+                return false
+            }
+            try encoded.write(to: url.resolvingSymlinksInPath(), options: .atomic)
         } catch {
             saveError = error.localizedDescription
             notifyEditState()

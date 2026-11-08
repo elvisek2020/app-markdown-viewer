@@ -15,6 +15,9 @@ echo "== Self-test náhledu"
 "$ROOT/scripts/selftest.sh" "$ROOT/Samples/showcase.md" > "$WORK/showcase.json"
 echo "== Bezpečnostní dokument"
 "$ROOT/scripts/selftest.sh" "$ROOT/Samples/security.md" > "$WORK/security.json"
+echo "== Textový soubor"
+printf '# neni nadpis\n\n*doslova* <b>x</b>\n' > "$WORK/poznamky.txt"
+"$ROOT/scripts/selftest.sh" "$WORK/poznamky.txt" > "$WORK/plain.json"
 echo "== Zátěž auto-reloadu"
 "$ROOT/scripts/selftest-sim.sh" | tee "$WORK/sim.txt"
 echo "== Pracovní složka"
@@ -118,6 +121,10 @@ check("aktualizace: po ukončení aplikace skript vymění aplikaci", u.get("rep
 s = json.load(open(f"{work}/security.json"))["phase1"]
 check("security.md: žádné skripty, iframy, formuláře",
       s.get("scripts") == 0 and s.get("iframes") == 0 and s.get("forms") == 0 and s.get("pwnedByInlineHandler") is False)
+
+p = json.load(open(f"{work}/plain.json"))["phase1"]
+check(".txt: otevře se a zobrazí doslova, bez Markdownu", p.get("blocks") == 2 and p.get("headingAnchors") == [], p)
+check(".txt: úprava zachová kódování souboru", e.get("plainTextKeepsEncoding") is True, e.get("plainTextKeepsEncoding"))
 
 sim = open(f"{work}/sim.txt").read()
 match = re.search(r"finální revize \d+: ANO, zpoždění od posledního zápisu: (-?\d+) ms", sim)

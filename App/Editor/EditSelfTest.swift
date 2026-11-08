@@ -164,8 +164,21 @@ enum EditSelfTest {
                 && sourceHidden
             click(1)
             report["clickEditOff"] = preview.paneMode == .preview && segments() == [false, false] && !window.titlebarAppearsTransparent
+            report["plainTextKeepsEncoding"] = plainTextKeepsEncoding(in: URL(fileURLWithPath: reportPath).deletingLastPathComponent())
             finish(report, to: reportPath)
         }
+    }
+
+    /// Textový soubor ve Windows-1250 se po úpravě uloží ve stejném kódování.
+    private static func plainTextKeepsEncoding(in directory: URL) -> Bool {
+        let url = directory.appendingPathComponent("poznamky.txt")
+        guard let original = "žluťoučký".data(using: .windowsCP1250), (try? original.write(to: url)) != nil else { return false }
+        let model = DocumentModel(url: url)
+        guard (try? model.start()) != nil else { return false }
+        defer { model.stop() }
+        _ = model.beginEditing()
+        model.edit("žluťoučký kůň")
+        return model.save(force: true) && (try? Data(contentsOf: url)) == "žluťoučký kůň".data(using: .windowsCP1250)
     }
 
     /// Psaní jako z klávesnice (přes NSTextView, takže projde delegátem jako uživatelský vstup).

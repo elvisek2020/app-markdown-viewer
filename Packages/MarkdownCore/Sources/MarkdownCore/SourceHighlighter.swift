@@ -39,6 +39,15 @@ public enum SourceHighlighter {
         return output
     }
 
+    /// Zdroj prostého textu – jen řádky, bez zvýraznění Markdownu.
+    public static func plainHTML(for text: String) -> String {
+        var lines = text.markdownLines().map(String.init)
+        if lines.count > 1, lines.last == "" { lines.removeLast() }
+        return lines.enumerated().map { index, line in
+            "<div class=\"src-line\" data-line=\"\(index + 1)\">\(HTMLEscaping.escape(line))</div>"
+        }.joined()
+    }
+
     // MARK: - Bloky
 
     private static func highlightBlock(_ line: String) -> (String, String) {
