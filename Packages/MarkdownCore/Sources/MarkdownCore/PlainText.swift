@@ -2,13 +2,25 @@ import Foundation
 
 /// Prosté textové soubory (.txt, .log): zobrazují se doslova, bez interpretace Markdownu.
 public enum PlainText {
-    public static let extensions: Set<String> = ["txt", "text", "log"]
+    /// Poznámky: otevírají se v editoru přes celé okno.
+    public static let editableExtensions: Set<String> = ["txt", "text"]
+    /// Logy připisuje jiný proces, proto jsou jen ke čtení.
+    public static let readOnlyExtensions: Set<String> = ["log"]
+    public static var extensions: Set<String> { editableExtensions.union(readOnlyExtensions) }
     /// Log často nemá prázdné řádky; delší souvislý text se dělí, aby se při připsání na konec
     /// nepřekreslovalo všechno a synchronizace se zdrojem měla po čem jít.
     private static let maxBlockLines = 100
 
     public static func isPlainText(_ url: URL) -> Bool {
         extensions.contains(url.pathExtension.lowercased())
+    }
+
+    public static func isEditableText(_ url: URL) -> Bool {
+        editableExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    public static func isReadOnly(_ url: URL) -> Bool {
+        readOnlyExtensions.contains(url.pathExtension.lowercased())
     }
 
     /// Text souboru a jeho kódování (stejným se pak ukládá). Textové soubory bývají i ve starších

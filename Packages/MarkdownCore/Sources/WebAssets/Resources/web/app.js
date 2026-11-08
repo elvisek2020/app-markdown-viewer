@@ -839,7 +839,8 @@
     } else if (!state.hasContent && payload.restoreLine) {
       scrollToLine(payload.restoreLine);
     }
-    if (!state.hasContent) scroller().focus({ preventScroll: true });
+    // V režimu úprav má fokus zůstat v editoru (focus() ho WKWebView vezme i jako skrytý).
+    if (!state.hasContent && !state.editing) scroller().focus({ preventScroll: true });
     state.hasContent = true;
 
     await enhance(fresh);

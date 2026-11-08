@@ -1,17 +1,19 @@
 import AppKit
 
 /// Obsah okna vedle osnovy: banner úprav nahoře, pod ním split editor | náhled.
-/// Bez režimu úprav je ve splitu jen náhled.
+/// Bez režimu úprav je ve splitu jen náhled; textové soubory mají editor přes celou šířku.
 final class PreviewContainerView: NSView, NSSplitViewDelegate {
     let banner = EditBanner()
     let split = NSSplitView()
     private var editorView: NSView?
+    private let previewView: NSView
     private var pendingRatio: Double?
 
     /// Uživatel posunul dělič – podíl šířky editoru.
     var onDividerMoved: ((Double) -> Void)?
 
     init(preview: NSView) {
+        previewView = preview
         super.init(frame: preview.frame)
         split.isVertical = true
         split.dividerStyle = .thin
@@ -44,10 +46,16 @@ final class PreviewContainerView: NSView, NSSplitViewDelegate {
 
     var isEditorVisible: Bool { editorView != nil }
 
-    func showEditor(_ view: NSView, ratio: Double) {
+    /// `fullWidth`: editor sám, náhled zůstane skrytý (dál se aktualizuje, po konci úprav je hned hotový).
+    func showEditor(_ view: NSView, ratio: Double, fullWidth: Bool = false) {
         editorView = view
         split.insertArrangedSubview(view, at: 0)
-        pendingRatio = min(0.75, max(0.25, ratio))
+        if fullWidth {
+            previewView.isHidden = true
+            split.adjustSubviews()
+        } else {
+            pendingRatio = min(0.75, max(0.25, ratio))
+        }
         needsLayout = true
         layoutSubtreeIfNeeded()
     }
@@ -56,6 +64,7 @@ final class PreviewContainerView: NSView, NSSplitViewDelegate {
         editorView?.removeFromSuperview()
         editorView = nil
         pendingRatio = nil
+        previewView.isHidden = false
         split.adjustSubviews()
     }
 
@@ -67,6 +76,10 @@ final class PreviewContainerView: NSView, NSSplitViewDelegate {
 
     func splitView(_ splitView: NSSplitView, constrainMaxCoordinate proposedMaximumPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
         min(proposedMaximumPosition, splitView.bounds.width - 260)
+    }
+
+    func splitView(_ splitView: NSSplitView, shouldHideDividerAt dividerIndex: Int) -> Bool {
+        previewView.isHidden
     }
 
     func splitViewDidResizeSubviews(_ notification: Notification) {

@@ -26,7 +26,14 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
     private var suppressHighlightOnce = false
 
     /// Zdrojový panel vedle náhledu (stav okna). V režimu úprav ho nahrazuje editor.
-    private(set) var isSourceVisible = Preferences.showSourceByDefault
+    private(set) var isSourceVisible: Bool
+    /// Textový soubor: jen editor přes celé okno, bez zdrojového panelu.
+    let editsFullWindow: Bool
+    /// Log je jen ke čtení.
+    let allowsEditing: Bool
+    var allowsSource: Bool { !editsFullWindow }
+    /// Větší textové soubory se otevřou nejdřív ke čtení, aby editor nezpomalil otevírání.
+    private static let editorOpenLimit = 1_000_000
     var showsSource: Bool { isSourceVisible && editor == nil }
 
     /// Co je vedle náhledu: nic, zdroj, nebo editor (přepínač v liště, `setPaneMode`).
@@ -57,6 +64,9 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
 
     init(model: DocumentModel) {
         self.model = model
+        editsFullWindow = PlainText.isEditableText(model.url)
+        allowsEditing = !PlainText.isReadOnly(model.url)
+        isSourceVisible = Preferences.showSourceByDefault && !editsFullWindow
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -176,6 +186,13 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
             SelfTest.recordStatus(webView: webView, world: Self.world)
             #endif
         }
+    }
+
+    /// Volá okno po sestavení: textový soubor rozumné velikosti začíná v editoru.
+    func applyInitialMode() {
+        guard editsFullWindow, model.text.utf8.count <= Self.editorOpenLimit else { return }
+        _ = view
+        beginEditing()
     }
 
     private func sendSourceState() {
@@ -315,8 +332,10 @@ final class PreviewController: NSViewController, ViewerActions, NSMenuItemValida
             menuItem.state = Preferences.followTail ? .on : .off
         case #selector(toggleSourcePane(_:)):
             menuItem.state = paneMode == .source ? .on : .off
+            return allowsSource
         case #selector(toggleEditMode(_:)):
             menuItem.state = editor != nil ? .on : .off
+            return allowsEditing
         case #selector(saveDocument(_:)):
             return editor != nil
         default:

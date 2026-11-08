@@ -125,6 +125,14 @@ check("security.md: žádné skripty, iframy, formuláře",
 p = json.load(open(f"{work}/plain.json"))["phase1"]
 check(".txt: otevře se a zobrazí doslova, bez Markdownu", p.get("blocks") == 2 and p.get("headingAnchors") == [], p)
 check(".txt: úprava zachová kódování souboru", e.get("plainTextKeepsEncoding") is True, e.get("plainTextKeepsEncoding"))
+t = e.get("plainText", {})
+check(".txt: editor přes celé okno, bez náhledu, zdroje a osnovy",
+      all(t.get(k) is True for k in ("txtOpensInEditor", "txtEditorFocused", "txtFullWidth", "txtSwitchOnlyEdit", "txtNoSidebar", "txtSourceRefused")), t)
+check(".txt: hledání v editoru (i bez diakritiky)", t.get("txtFindMatches") == 2 and t.get("txtFindStepSelects", "").lower() == "hledané", t)
+check(".txt: po vypnutí úprav náhled přes celou šířku", t.get("txtLeavesToReading") is True, t)
+check(".txt: export do PDF i ze skrytého náhledu", t.get("txtExportsPDF") is True, t)
+check("velký .txt se otevře ke čtení", t.get("bigTxtOpensForReading") is True, t)
+check(".log: jen ke čtení", t.get("logReadOnly") is True and t.get("logSwitchOnlySource") is True, t)
 
 sim = open(f"{work}/sim.txt").read()
 match = re.search(r"finální revize \d+: ANO, zpoždění od posledního zápisu: (-?\d+) ms", sim)

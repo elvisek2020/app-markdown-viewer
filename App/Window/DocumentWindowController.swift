@@ -1,4 +1,5 @@
 import AppKit
+import MarkdownCore
 import SwiftUI
 
 /// Okno dokumentu: osnova (SwiftUI) | náhled se zdrojem, nástrojová lišta s osnovou, zdrojem a hledáním.
@@ -23,16 +24,19 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         window.toolbarStyle = .unified
         super.init(window: window)
 
-        let outlineHost = NSHostingController(rootView: OutlineSidebar(state: outline))
-        // Velikost okna neřídí obsah osnovy – jinak by okno bez uloženého rámu sjelo na výšku seznamu.
-        outlineHost.sizingOptions = []
-        let sidebar = NSSplitViewItem(sidebarWithViewController: outlineHost)
-        sidebar.minimumThickness = 180
-        sidebar.maximumThickness = 420
-        sidebar.canCollapse = true
-        split.addSplitViewItem(sidebar)
+        // Prostý text nemá nadpisy, takže ani osnovu; autosave splitu patří oknům s osnovou.
+        if hasOutline {
+            let outlineHost = NSHostingController(rootView: OutlineSidebar(state: outline))
+            // Velikost okna neřídí obsah osnovy – jinak by okno bez uloženého rámu sjelo na výšku seznamu.
+            outlineHost.sizingOptions = []
+            let sidebar = NSSplitViewItem(sidebarWithViewController: outlineHost)
+            sidebar.minimumThickness = 180
+            sidebar.maximumThickness = 420
+            sidebar.canCollapse = true
+            split.addSplitViewItem(sidebar)
+        }
         split.addSplitViewItem(NSSplitViewItem(viewController: preview))
-        if !Self.isSelfTest { split.splitView.autosaveName = "MDViewDocumentSplit" }
+        if hasOutline, !Self.isSelfTest { split.splitView.autosaveName = "MDViewDocumentSplit" }
         window.contentViewController = split
         window.setContentSize(NSSize(width: 1100, height: 1000))
 
@@ -54,7 +58,10 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         model.observeRender { [weak outline] document in outline?.items = document.outline }
         model.observeMove { [weak self] url in self?.updateSubtitle(url) }
         updateSubtitle(model.url)
+        preview.applyInitialMode()
     }
+
+    private var hasOutline: Bool { !PlainText.isPlainText(preview.model.url) }
 
     private static var isSelfTest: Bool {
         #if DEBUG
@@ -77,7 +84,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .flexibleSpace, ToolbarItems.appearance, ToolbarItems.mode, ToolbarItems.settings, ToolbarItems.search]
+        (hasOutline ? [.toggleSidebar] : []) + [.flexibleSpace, ToolbarItems.appearance, ToolbarItems.mode, ToolbarItems.settings, ToolbarItems.search]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {

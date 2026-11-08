@@ -16,9 +16,11 @@ extension PreviewController {
         guard mode != paneMode else { return true }
         switch mode {
         case .edit:
+            guard allowsEditing else { return false }
             setSourceVisible(false)
             beginEditing()
         case .source, .preview:
+            if mode == .source, !allowsSource { return false }
             guard finishEditing() else { return false }
             setSourceVisible(mode == .source)
         }
@@ -40,7 +42,7 @@ extension PreviewController {
         editor.onScroll = { [weak self] line in self?.editorDidScroll(toLine: line) }
         self.editor = editor
         editorLeads = false
-        container.showEditor(editor.scrollView, ratio: Preferences.editorWidth)
+        container.showEditor(editor.scrollView, ratio: Preferences.editorWidth, fullWidth: editsFullWindow)
         applySourceState()
         view.window?.makeFirstResponder(editor.textView)
         Task {

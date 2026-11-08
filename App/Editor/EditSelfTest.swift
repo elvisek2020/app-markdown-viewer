@@ -1,5 +1,6 @@
 #if DEBUG
 import AppKit
+import PDFKit
 import WebKit
 
 /// Self-test režimu úprav (`scripts/selftest-edit.sh`, jen soubory v /tmp): psaní se hned ukáže
@@ -165,8 +166,61 @@ enum EditSelfTest {
             click(1)
             report["clickEditOff"] = preview.paneMode == .preview && segments() == [false, false] && !window.titlebarAppearsTransparent
             report["plainTextKeepsEncoding"] = plainTextKeepsEncoding(in: URL(fileURLWithPath: reportPath).deletingLastPathComponent())
+            report["plainText"] = await plainTextWindows(in: URL(fileURLWithPath: reportPath).deletingLastPathComponent())
             finish(report, to: reportPath)
         }
+    }
+
+    /// `.txt` začíná v editoru přes celé okno, velký `.txt` ke čtení, `.log` je jen ke čtení.
+    private static func plainTextWindows(in directory: URL) async -> [String: Any] {
+        func open(_ name: String, _ text: String) async -> (NSDocument, NSWindow, PreviewController)? {
+            let url = directory.appendingPathComponent(name)
+            guard (try? text.write(to: url, atomically: true, encoding: .utf8)) != nil,
+                  let (document, _) = try? await NSDocumentController.shared.openDocument(withContentsOf: url, display: true),
+                  let controller = document.windowControllers.first as? DocumentWindowController,
+                  let window = controller.window else { return nil }
+            _ = await waitUntil { controller.preview.hasContent }
+            return (document, window, controller.preview)
+        }
+        func segmentCount(_ window: NSWindow) -> Int {
+            (window.toolbar?.items.first { $0.itemIdentifier == ToolbarItems.mode }?.view as? NSSegmentedControl)?.segmentCount ?? -1
+        }
+        var result: [String: Any] = [:]
+        if let (document, window, preview) = await open("poznamky-okno.txt", "první hledané\nkůň\nHLEDANÉ třetí\n") {
+            let container = preview.container!
+            if let path = UserDefaults.standard.string(forKey: "MDViewSelfTestPlainSnapshot") {
+                try? await Task.sleep(for: .milliseconds(300))
+                await snapshot(window, preview: preview, to: path)
+            }
+            let editor = preview.editor
+            result["txtOpensInEditor"] = preview.paneMode == .edit
+            result["txtEditorFocused"] = editor.map { window.firstResponder === $0.textView } ?? false
+            result["txtFullWidth"] = preview.webView.isHidden && editor?.scrollView.frame.width == container.split.bounds.width
+            result["txtSwitchOnlyEdit"] = segmentCount(window) == 1
+            result["txtNoSidebar"] = !(window.toolbar?.items.contains { $0.itemIdentifier == .toggleSidebar } ?? true)
+            result["txtSourceRefused"] = !preview.setPaneMode(.source) && preview.paneMode == .edit
+            result["txtFindMatches"] = editor?.find("hledane", ignoreDiacritics: true) ?? -1
+            editor?.findStep(1)
+            result["txtFindStepSelects"] = editor.map { ($0.text as NSString).substring(with: $0.textView.selectedRange()) } ?? ""
+            let pdfURL = directory.appendingPathComponent("poznamky-okno.pdf")
+            try? await preview.exportPDF(to: pdfURL)
+            result["txtExportsPDF"] = PDFDocument(url: pdfURL)?.string?.contains("HLEDANÉ") ?? false
+            preview.setPaneMode(.preview)
+            result["txtLeavesToReading"] = preview.paneMode == .preview && !preview.webView.isHidden
+                && preview.webView.frame.width == container.split.bounds.width
+            document.close()
+        }
+        let big = String(repeating: "řádek textu\n", count: 100_000)
+        if let (document, _, preview) = await open("velky.txt", big) {
+            result["bigTxtOpensForReading"] = preview.paneMode == .preview
+            document.close()
+        }
+        if let (document, window, preview) = await open("server.log", "řádek\n") {
+            result["logReadOnly"] = preview.paneMode == .preview && !preview.setPaneMode(.edit) && preview.editor == nil
+            result["logSwitchOnlySource"] = segmentCount(window) == 1
+            document.close()
+        }
+        return result
     }
 
     /// Textový soubor ve Windows-1250 se po úpravě uloží ve stejném kódování.
@@ -202,7 +256,8 @@ enum EditSelfTest {
         guard let frameView = window.contentView?.superview,
               let rep = frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds) else { return }
         frameView.cacheDisplay(in: frameView.bounds, to: rep)
-        if let web = try? await preview.webView.takeSnapshot(configuration: WKSnapshotConfiguration()),
+        if !preview.webView.isHidden,
+           let web = try? await preview.webView.takeSnapshot(configuration: WKSnapshotConfiguration()),
            let context = NSGraphicsContext(bitmapImageRep: rep) {
             var frame = preview.webView.convert(preview.webView.bounds, to: frameView)
             if frameView.isFlipped { frame.origin.y = frameView.bounds.height - frame.maxY }

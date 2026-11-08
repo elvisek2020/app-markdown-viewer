@@ -2,7 +2,11 @@ import AppKit
 
 /// Hledání v náhledu: pole v nástrojové liště → `mdv.find` (CSS Custom Highlight API).
 /// Enter = další výsledek, ⇧Enter = předchozí, Esc = zrušit. Počet výsledků ukazuje náhled.
+/// Editor přes celé okno náhled zakrývá, proto se hledá přímo v něm.
 extension PreviewController: NSSearchFieldDelegate {
+    /// Editor, ve kterém se má hledat místo v náhledu.
+    private var findEditor: MarkdownEditor? { editsFullWindow ? editor : nil }
+
     @objc func findInDocument(_ sender: Any?) {
         searchItem?.beginSearchInteraction()
     }
@@ -16,6 +20,13 @@ extension PreviewController: NSSearchFieldDelegate {
     }
 
     @objc func useSelectionForFind(_ sender: Any?) {
+        if let findEditor {
+            let text = (findEditor.text as NSString).substring(with: findEditor.textView.selectedRange())
+            guard !text.isEmpty else { return }
+            searchField?.stringValue = text
+            startFind(text)
+            return
+        }
         Task {
             guard let text = await callString("return mdv.selectionText()"), !text.isEmpty else { return }
             searchField?.stringValue = text
@@ -35,7 +46,7 @@ extension PreviewController: NSSearchFieldDelegate {
         case #selector(NSResponder.cancelOperation(_:)):
             searchField?.stringValue = ""
             startFind("")
-            view.window?.makeFirstResponder(webView)
+            view.window?.makeFirstResponder(findEditor?.textView ?? webView)
             return true
         default:
             return false
@@ -56,10 +67,18 @@ extension PreviewController: NSSearchFieldDelegate {
     }
 
     private func startFind(_ query: String) {
+        if let findEditor {
+            findEditor.find(query, ignoreDiacritics: Preferences.ignoreDiacritics)
+            return
+        }
         Task { await runFind(query) }
     }
 
     private func findStep(_ delta: Int) {
+        if let findEditor {
+            findEditor.findStep(delta)
+            return
+        }
         Task { try? await call("mdv.findStep(delta)", ["delta": delta]) }
     }
 }

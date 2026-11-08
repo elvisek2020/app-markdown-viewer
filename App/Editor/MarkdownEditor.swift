@@ -10,6 +10,10 @@ final class MarkdownEditor: NSObject, NSTextViewDelegate {
     private let undo = UndoManager()
     private var lineStarts: [Int]?
     private var isScrollingProgrammatically = false
+    private var findQuery = ""
+    private var findIgnoresDiacritics = false
+    private var findMatches: [NSRange] = []
+    private var findIndex = 0
 
     /// Uživatel změnil text (ne `replaceText`).
     var onChange: ((String) -> Void)?
@@ -89,6 +93,7 @@ final class MarkdownEditor: NSObject, NSTextViewDelegate {
 
     func textDidChange(_ notification: Notification) {
         lineStarts = nil
+        updateFindMatches()
         onChange?(textView.string)
     }
 
@@ -100,6 +105,53 @@ final class MarkdownEditor: NSObject, NSTextViewDelegate {
     @objc private func boundsDidChange(_ notification: Notification) {
         guard !isScrollingProgrammatically else { return }
         onScroll?(topLine())
+    }
+
+    // MARK: - Hledání (editor přes celé okno)
+
+    /// Zvýrazní všechny výskyty a přejde na první od začátku viditelné části. Vrací jejich počet.
+    @discardableResult
+    func find(_ query: String, ignoreDiacritics: Bool) -> Int {
+        findQuery = query
+        findIgnoresDiacritics = ignoreDiacritics
+        updateFindMatches()
+        let cursor = textView.selectedRange().location
+        findIndex = findMatches.firstIndex { $0.location >= cursor } ?? 0
+        showCurrentMatch()
+        return findMatches.count
+    }
+
+    func findStep(_ delta: Int) {
+        guard !findMatches.isEmpty else { return }
+        findIndex = (findIndex + delta + findMatches.count) % findMatches.count
+        showCurrentMatch()
+    }
+
+    private func updateFindMatches() {
+        guard let layoutManager = textView.layoutManager else { return }
+        let text = textView.string as NSString
+        let whole = NSRange(location: 0, length: text.length)
+        layoutManager.removeTemporaryAttribute(.backgroundColor, forCharacterRange: whole)
+        findMatches = []
+        guard !findQuery.isEmpty else { return }
+        var options: NSString.CompareOptions = [.caseInsensitive]
+        if findIgnoresDiacritics { options.insert(.diacriticInsensitive) }
+        var search = whole
+        while search.length > 0 {
+            let match = text.range(of: findQuery, options: options, range: search)
+            guard match.location != NSNotFound, match.length > 0 else { break }
+            findMatches.append(match)
+            layoutManager.addTemporaryAttribute(.backgroundColor, value: NSColor.findHighlightColor.withAlphaComponent(0.4), forCharacterRange: match)
+            search = NSRange(location: NSMaxRange(match), length: text.length - NSMaxRange(match))
+        }
+    }
+
+    private func showCurrentMatch() {
+        guard findMatches.indices.contains(findIndex) else { return }
+        let match = findMatches[findIndex]
+        textView.setSelectedRange(match)
+        textView.scrollRangeToVisible(match)
+        textView.showFindIndicator(for: match)
     }
 
     // MARK: - Načtení verze z disku
@@ -131,6 +183,7 @@ final class MarkdownEditor: NSObject, NSTextViewDelegate {
         storage.replaceCharacters(in: changed, with: NSAttributedString(string: replacement, attributes: textView.typingAttributes))
         lineStarts = nil
         undo.removeAllActions()
+        updateFindMatches()
 
         let start = shifted(selection.location)
         let end = shifted(NSMaxRange(selection))

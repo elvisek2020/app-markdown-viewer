@@ -2,55 +2,89 @@ import AppKit
 
 /// Přepínač Zdroj | Upravit v nástrojové liště. Zapnutý je nejvýš jeden režim: klik na druhý
 /// přepne rovnou, klik na zapnutý ho vypne a zůstane jen náhled. V režimu úprav lehce zabarví lištu.
+/// Textový soubor má jen Upravit, log jen Zdroj.
 final class PaneModeSwitch: NSObject {
-    private enum Segment: Int {
+    private enum Segment {
         case source, edit
+
+        var image: NSImage {
+            switch self {
+            case .source: NSImage(systemSymbolName: "chevron.left.forwardslash.chevron.right", accessibilityDescription: "Zdroj")!
+            case .edit: NSImage(systemSymbolName: "pencil", accessibilityDescription: "Upravit")!
+            }
+        }
+
+        var toolTip: String {
+            switch self {
+            case .source: "Zobrazit zdroj vedle náhledu (⌥⌘U)"
+            case .edit: "Režim úprav – změny se ukládají automaticky (⌥⌘E)"
+            }
+        }
     }
 
     let item: NSToolbarItem
     private let control: NSSegmentedControl
     private weak var preview: PreviewController?
     private weak var window: NSWindow?
+    private var segments: [Segment] = []
 
     init(window: NSWindow?) {
         self.window = window
-        let images = [
-            NSImage(systemSymbolName: "chevron.left.forwardslash.chevron.right", accessibilityDescription: "Zdroj")!,
-            NSImage(systemSymbolName: "pencil", accessibilityDescription: "Upravit")!,
-        ]
-        control = NSSegmentedControl(images: images, trackingMode: .selectAny, target: nil, action: nil)
-        control.setToolTip("Zobrazit zdroj vedle náhledu (⌥⌘U)", forSegment: Segment.source.rawValue)
-        control.setToolTip("Režim úprav – změny se ukládají automaticky (⌥⌘E)", forSegment: Segment.edit.rawValue)
+        control = NSSegmentedControl(images: [], trackingMode: .selectAny, target: nil, action: nil)
         item = NSToolbarItem(itemIdentifier: ToolbarItems.mode)
         item.view = control
         item.label = "Zdroj a úpravy"
         super.init()
         control.target = self
         control.action = #selector(changed(_:))
+        configure([.source, .edit])
+    }
+
+    private func configure(_ segments: [Segment]) {
+        guard segments != self.segments else { return }
+        self.segments = segments
+        control.segmentCount = segments.count
+        for (index, segment) in segments.enumerated() {
+            control.setImage(segment.image, forSegment: index)
+            control.setImageScaling(.scaleProportionallyDown, forSegment: index)
+            control.setToolTip(segment.toolTip, forSegment: index)
+        }
+    }
+
+    private func isSelected(_ segment: Segment) -> Bool {
+        segments.firstIndex(of: segment).map(control.isSelected(forSegment:)) ?? false
+    }
+
+    private func setSelected(_ selected: Bool, _ segment: Segment) {
+        if let index = segments.firstIndex(of: segment) { control.setSelected(selected, forSegment: index) }
     }
 
     /// Napojí přepínač na náhled (pracovní složka ho mění s vybraným souborem).
     func attach(_ preview: PreviewController) {
         self.preview = preview
+        var available: [Segment] = []
+        if preview.allowsSource { available.append(.source) }
+        if preview.allowsEditing { available.append(.edit) }
+        configure(available)
         preview.onPaneModeChange = { [weak self] mode in self?.update(mode) }
         update(preview.paneMode)
     }
 
     /// Stav pro self-test: (zdroj, úpravy).
     var selection: (source: Bool, edit: Bool) {
-        (control.isSelected(forSegment: Segment.source.rawValue), control.isSelected(forSegment: Segment.edit.rawValue))
+        (isSelected(.source), isSelected(.edit))
     }
 
     private func update(_ mode: PreviewController.PaneMode) {
-        control.setSelected(mode == .source, forSegment: Segment.source.rawValue)
-        control.setSelected(mode == .edit, forSegment: Segment.edit.rawValue)
+        setSelected(mode == .source, .source)
+        setSelected(mode == .edit, .edit)
         applyTint(editing: mode == .edit)
     }
 
     @objc private func changed(_ sender: NSSegmentedControl) {
         guard let preview else { return }
-        let source = sender.isSelected(forSegment: Segment.source.rawValue)
-        let edit = sender.isSelected(forSegment: Segment.edit.rawValue)
+        let source = isSelected(.source)
+        let edit = isSelected(.edit)
         let target: PreviewController.PaneMode = switch (source, edit) {
         case (true, true): preview.paneMode == .source ? .edit : .source
         case (true, false): .source

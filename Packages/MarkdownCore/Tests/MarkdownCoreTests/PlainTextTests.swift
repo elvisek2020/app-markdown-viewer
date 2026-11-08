@@ -45,5 +45,8 @@ import Testing
         #expect(PlainText.isPlainText(URL(fileURLWithPath: "/tmp/A.TXT")))
         #expect(PlainText.isPlainText(URL(fileURLWithPath: "/tmp/server.log")))
         #expect(!PlainText.isPlainText(URL(fileURLWithPath: "/tmp/a.md")))
+        #expect(PlainText.isEditableText(URL(fileURLWithPath: "/tmp/A.TXT")))
+        #expect(!PlainText.isEditableText(URL(fileURLWithPath: "/tmp/server.log")))
+        #expect(PlainText.isReadOnly(URL(fileURLWithPath: "/tmp/server.LOG")))
     }
 }
