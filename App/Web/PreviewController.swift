@@ -410,6 +410,28 @@ private final class WeakMessageHandler: NSObject, WKScriptMessageHandler {
 
 /// WKWebView bez položek kontextového menu, které by otevíraly nová okna nebo stahovaly.
 final class PreviewWebView: WKWebView {
+    // Soubory z Finderu otevírá aplikace; WKWebView by se je pokusil načíst.
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        FileDrop.operation(for: sender) ?? super.draggingEntered(sender)
+    }
+
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        FileDrop.operation(for: sender) ?? super.draggingUpdated(sender)
+    }
+
+    override func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        FileDrop.isFileDrag(sender) || super.prepareForDragOperation(sender)
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        FileDrop.perform(sender) ?? super.performDragOperation(sender)
+    }
+
+    override func concludeDragOperation(_ sender: (any NSDraggingInfo)?) {
+        if let sender, FileDrop.isFileDrag(sender) { return }
+        super.concludeDragOperation(sender)
+    }
+
     private static let removedItems: Set<String> = [
         "WKMenuItemIdentifierOpenLinkInNewWindow",
         "WKMenuItemIdentifierDownloadLinkedFile",

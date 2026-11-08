@@ -1,12 +1,36 @@
 import AppKit
 
+/// Přetažený text se vkládá, soubory z Finderu otevírá aplikace (`NSTextView` by vložil jejich cestu).
+final class EditorTextView: NSTextView {
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        FileDrop.operation(for: sender) ?? super.draggingEntered(sender)
+    }
+
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        FileDrop.operation(for: sender) ?? super.draggingUpdated(sender)
+    }
+
+    override func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        FileDrop.isFileDrag(sender) || super.prepareForDragOperation(sender)
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        FileDrop.perform(sender) ?? super.performDragOperation(sender)
+    }
+
+    override func concludeDragOperation(_ sender: (any NSDraggingInfo)?) {
+        if let sender, FileDrop.isFileDrag(sender) { return }
+        super.concludeDragOperation(sender)
+    }
+}
+
 /// Jednoduchý editor Markdownu: `NSTextView` (TextKit 1 – přesné pozice řádků pro synchronizaci
 /// s náhledem), neproporcionální písmo, bez automatických náhrad a kontroly pravopisu.
 /// Vzniká až při zapnutí režimu úprav, takže start aplikace nezdržuje. Barvy, písmo a řádkování
 /// má stejné jako zdrojový panel (`--mdv-source-*` v app.css), aby přepnutí zdroj ↔ úpravy nebylo znát.
 final class MarkdownEditor: NSObject, NSTextViewDelegate {
     let scrollView = NSScrollView()
-    let textView = NSTextView(usingTextLayoutManager: false)
+    let textView = EditorTextView(usingTextLayoutManager: false)
     private let undo = UndoManager()
     private var lineStarts: [Int]?
     private var isScrollingProgrammatically = false

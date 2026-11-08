@@ -12,7 +12,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
 
     init(model: DocumentModel) {
         preview = PreviewController(model: model)
-        let window = NSWindow(
+        let window = FileDropWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1100, height: 1000),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,

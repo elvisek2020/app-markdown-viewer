@@ -28,7 +28,7 @@ final class WorkspaceWindowController: NSWindowController, NSToolbarDelegate, NS
         // Jednotná podoba cest: strom, FSEvents (/private/var…) i obnova se převádějí přes
         // resolvingSymlinksInPath, které /private odstraní – jinak by výběr ve stromu nesouhlasil.
         self.folder = folder.resolvingSymlinksInPath()
-        let window = NSWindow(
+        let window = FileDropWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1200, height: 1000),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,

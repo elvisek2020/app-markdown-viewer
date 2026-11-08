@@ -205,6 +205,7 @@ enum EditSelfTest {
             let pdfURL = directory.appendingPathComponent("poznamky-okno.pdf")
             try? await preview.exportPDF(to: pdfURL)
             result["txtExportsPDF"] = PDFDocument(url: pdfURL)?.string?.contains("HLEDANÉ") ?? false
+            result["fileDrop"] = await fileDropChecks(window: window, preview: preview, in: directory)
             preview.setPaneMode(.preview)
             result["txtLeavesToReading"] = preview.paneMode == .preview && !preview.webView.isHidden
                 && preview.webView.frame.width == container.split.bounds.width
@@ -220,6 +221,52 @@ enum EditSelfTest {
             result["logSwitchOnlySource"] = segmentCount(window) == 1
             document.close()
         }
+        return result
+    }
+
+    /// Přetažení souborů z Finderu nad editor, náhled i okno (tažení simuluje `FakeDrag`).
+    private static func fileDropChecks(window: NSWindow, preview: PreviewController, in directory: URL) async -> [String: Any] {
+        guard let editor = preview.editor, let dropWindow = window as? FileDropWindow else { return ["error": "chybí editor nebo okno"] }
+        func file(_ name: String) -> URL {
+            let url = directory.appendingPathComponent(name)
+            try? "# obsah\n".write(to: url, atomically: true, encoding: .utf8)
+            return url
+        }
+        func isOpen(_ url: URL) async -> Bool {
+            await waitUntil { NSDocumentController.shared.documents.contains { $0.fileURL?.lastPathComponent == url.lastPathComponent } }
+        }
+        func closeDropped(_ url: URL) {
+            NSDocumentController.shared.documents.first { $0.fileURL?.lastPathComponent == url.lastPathComponent }?.close()
+        }
+        var result: [String: Any] = [:]
+        result["accepted"] = editor.textView.draggingEntered(FakeDrag([file("a.md")])) == .copy
+            && preview.webView.draggingEntered(FakeDrag([file("a.md")])) == .copy
+            && dropWindow.draggingEntered(FakeDrag([file("a.md")])) == .copy
+        // Pasteboard je jeden společný – tažení vzniká až těsně před použitím.
+        let unsupported = FakeDrag([file("archiv.zip")])
+        result["unsupportedRefused"] = editor.textView.draggingEntered(unsupported) == []
+            && preview.webView.draggingEntered(unsupported) == []
+            && dropWindow.draggingEntered(unsupported) == []
+            && editor.textView.performDragOperation(unsupported) == false
+        let package = directory.appendingPathComponent("Balik.app")
+        try? FileManager.default.createDirectory(at: package, withIntermediateDirectories: true)
+        result["appBundleRefused"] = dropWindow.draggingEntered(FakeDrag([package])) == []
+        let before = editor.text
+        let overEditor = file("nad-editorem.md")
+        let performedEditor = editor.textView.performDragOperation(FakeDrag([overEditor]))
+        result["editorOpens"] = performedEditor
+        result["editorOpened"] = await isOpen(overEditor)
+        result["editorTextUntouched"] = editor.text == before
+        closeDropped(overEditor)
+        let overPreview = file("nad-nahledem.txt")
+        result["previewOpens"] = preview.webView.performDragOperation(FakeDrag([overPreview]))
+        result["previewOpened"] = await isOpen(overPreview)
+        closeDropped(overPreview)
+        let overWindow = directory.appendingPathComponent("slozka-tazena")
+        try? FileManager.default.createDirectory(at: overWindow, withIntermediateDirectories: true)
+        result["windowOpens"] = dropWindow.performDragOperation(FakeDrag([overWindow]))
+        result["windowOpenedFolder"] = await isOpen(overWindow)
+        closeDropped(overWindow)
         return result
     }
 
@@ -247,6 +294,32 @@ enum EditSelfTest {
         ) {
             NSApp.postEvent(event, atStart: false)
         }
+    }
+
+    /// Tažení ze simulovaného Finderu: jen pasteboard s file URL a bez zdroje v aplikaci.
+    private final class FakeDrag: NSObject, NSDraggingInfo {
+        let draggingPasteboard = NSPasteboard(name: NSPasteboard.Name("MDViewSelfTestDrag"))
+        init(_ urls: [URL]) {
+            draggingPasteboard.clearContents()
+            draggingPasteboard.writeObjects(urls as [NSURL])
+        }
+        var draggingDestinationWindow: NSWindow? { nil }
+        var draggingSourceOperationMask: NSDragOperation { .copy }
+        var draggingLocation: NSPoint { .zero }
+        var draggedImageLocation: NSPoint { .zero }
+        var draggedImage: NSImage? { nil }
+        var draggingSource: Any? { nil }
+        var draggingSequenceNumber: Int { 1 }
+        func slideDraggedImage(to screenPoint: NSPoint) {}
+        var draggingFormation: NSDraggingFormation { get { .default } set {} }
+        var animatesToDestination: Bool { get { false } set {} }
+        var numberOfValidItemsForDrop: Int { get { 1 } set {} }
+        func enumerateDraggingItems(
+            options enumOpts: NSDraggingItemEnumerationOptions, for view: NSView?, classes classArray: [AnyClass],
+            searchOptions: [NSPasteboard.ReadingOptionKey: Any], using block: @escaping (NSDraggingItem, Int, UnsafeMutablePointer<ObjCBool>) -> Void
+        ) {}
+        var springLoadingHighlight: NSSpringLoadingHighlight { .none }
+        func resetSpringLoading() {}
     }
 
     /// Snímek celého okna (lišta, banner, editor) vykreslený aplikací; obsah WKWebView se do

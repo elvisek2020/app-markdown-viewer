@@ -131,6 +131,10 @@ check(".txt: editor přes celé okno, bez náhledu, zdroje a osnovy",
 check(".txt: hledání v editoru (i bez diakritiky)", t.get("txtFindMatches") == 2 and t.get("txtFindStepSelects", "").lower() == "hledané", t)
 check(".txt: po vypnutí úprav náhled přes celou šířku", t.get("txtLeavesToReading") is True, t)
 check(".txt: export do PDF i ze skrytého náhledu", t.get("txtExportsPDF") is True, t)
+d = t.get("fileDrop", {})
+check("přetažení z Finderu: editor, náhled i okno otevřou soubor nebo složku",
+      all(d.get(k) is True for k in ("accepted", "editorOpens", "editorOpened", "editorTextUntouched", "previewOpens", "previewOpened", "windowOpens", "windowOpenedFolder")), d)
+check("přetažení z Finderu: nepodporované soubory a aplikace odmítnuty", d.get("unsupportedRefused") is True and d.get("appBundleRefused") is True, d)
 check("velký .txt se otevře ke čtení", t.get("bigTxtOpensForReading") is True, t)
 check(".log: jen ke čtení", t.get("logReadOnly") is True and t.get("logSwitchOnlySource") is True, t)
 
