@@ -1,9 +1,9 @@
 import Foundation
 
-/// Prosté textové soubory (.txt, .log): zobrazují se doslova, bez interpretace Markdownu.
+/// Prosté textové soubory (.txt, .cfg, .log): zobrazují se doslova, bez interpretace Markdownu.
 public enum PlainText {
-    /// Poznámky: otevírají se v editoru přes celé okno.
-    public static let editableExtensions: Set<String> = ["txt", "text"]
+    /// Poznámky a konfigurace: otevírají se v editoru přes celé okno.
+    public static let editableExtensions: Set<String> = ["txt", "text", "cfg"]
     /// Logy připisuje jiný proces, proto jsou jen ke čtení.
     public static let readOnlyExtensions: Set<String> = ["log"]
     public static var extensions: Set<String> { editableExtensions.union(readOnlyExtensions) }
